@@ -120,3 +120,19 @@ export interface PortfolioDbRecord {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface RenderedVideoDbRecord {
+  id: string;
+  studentId: string;
+  title: string;
+  conceptId?: string;
+  topic: string;
+  durationSeconds: number;
+  storyboard: any;
+  renderSettings?: Record<string, any>;
+  videoUrl?: string;
+  vttContent?: string;
+  shareToken: string;
+  provider: 'canvas_browser' | 'gemini_veo';
+  createdAt: string;
+}

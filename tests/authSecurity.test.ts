@@ -6,6 +6,7 @@ import { type Server } from 'http';
 import { app } from '../server.ts';
 import { createSessionToken, COOKIE_NAME } from '../server/auth.ts';
 import { readStore, writeStoreAtomically, seedDemoStore, type StoreUser } from '../server/store.ts';
+import { userRepository } from '../server/repositories/index.ts';
 
 let server: Server;
 let baseUrl: string;
@@ -320,8 +321,7 @@ describe('Production Auth & Strict Access Control Tests', () => {
     const body = await res.json();
     assert.equal(body.success, true);
 
-    const store = readStore();
-    const updated = store.users.find(u => u.id === studentUser.id);
+    const updated = userRepository.findById(studentUser.id);
     assert.equal(updated?.name, 'Updated Haritha');
     assert.equal(updated?.role, 'student'); // Still student
     assert.equal(updated?.plan, 'Free Plan'); // Still Free Plan

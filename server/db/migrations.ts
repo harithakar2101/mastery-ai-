@@ -258,6 +258,31 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 4,
+    name: '004_rendered_videos_table',
+    up: (db: Database.Database) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS rendered_videos (
+          id TEXT PRIMARY KEY,
+          student_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          concept_id TEXT,
+          topic TEXT NOT NULL,
+          duration_seconds INTEGER NOT NULL,
+          storyboard_json TEXT NOT NULL,
+          render_settings_json TEXT DEFAULT '{}',
+          video_url TEXT,
+          vtt_content TEXT,
+          share_token TEXT UNIQUE NOT NULL,
+          provider TEXT DEFAULT 'canvas_browser',
+          created_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_rendered_videos_student ON rendered_videos(student_id);
+        CREATE INDEX IF NOT EXISTS idx_rendered_videos_share ON rendered_videos(share_token);
+      `);
+    },
+  },
 ];
 
 export function runMigrations(targetDb?: Database.Database): number {
@@ -279,7 +304,7 @@ export function runMigrations(targetDb?: Database.Database): number {
     if (!appliedVersions.has(m.version)) {
       const runTx = db.transaction(() => {
         m.up(db);
-        db.prepare('INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)')
+        db.prepare('INSERT OR IGNORE INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)')
           .run(m.version, m.name, new Date().toISOString());
       });
       runTx();

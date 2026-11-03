@@ -51,6 +51,7 @@ import { registerLiveRoutes } from './server/liveRoutes.ts';
 import { registerTeacherRoutes } from './server/teacherRoutes.ts';
 import { registerStudyRoutes } from './server/studyRoutes.ts';
 import { registerStudyStudioRoutes } from './server/studyStudioRoutes.ts';
+import { registerVideoRoutes } from './server/videoRoutes.ts';
 
 dotenv.config();
 
@@ -216,6 +217,7 @@ registerLiveRoutes(app);
 registerTeacherRoutes(app);
 registerStudyRoutes(app);
 registerStudyStudioRoutes(app);
+registerVideoRoutes(app);
 
 // Endpoint: Full User State (Protected - studentId always derived from session)
 app.get('/api/user/state', authenticate, (req: Request, res: Response) => {

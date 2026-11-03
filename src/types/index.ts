@@ -122,24 +122,43 @@ export interface TutoringResponse {
   fallback_reason?: string | null;
 }
 
+export type VideoVisualType = 'diagram' | 'code_diff' | 'flowchart' | 'analogy' | 'architecture';
+
 export interface VideoScene {
   id: string;
-  scene_number: number;
-  duration_seconds: number;
-  visual_description: string;
-  narration_script: string;
+  scene_num?: number;
+  scene_number?: number;
+  time_range?: string;
+  time?: string;
+  duration?: number;
+  duration_seconds?: number;
+  title?: string;
+  visual?: string;
+  visual_description?: string;
+  visual_type?: VideoVisualType;
+  animation_type?: string;
+  on_screen_text?: string;
   on_screen_code_or_diagram?: string;
+  narration?: string;
+  narration_script?: string;
+  visual_elements?: string[];
   audio_fx?: string;
 }
 
 export interface VideoStoryboard {
-  topic: string;
-  misconception: string;
+  id?: string;
   title: string;
+  concept?: string;
+  topic?: string;
+  misconception?: string;
+  target_misconception?: string;
+  duration_secs?: number;
+  total_duration_seconds?: number;
+  key_takeaway?: string;
   scenes: VideoScene[];
-  total_duration_seconds: number;
   source?: string;
   fallback_reason?: string | null;
+  provider?: 'canvas_browser' | 'gemini_veo';
 }
 
 export interface ChatMessage {

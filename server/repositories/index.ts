@@ -11,3 +11,4 @@ export * from './flashcardRepository.ts';
 export * from './studyPlanRepository.ts';
 export * from './portfolioRepository.ts';
 export * from './cohortRepository.ts';
+export * from './videoRepository.ts';

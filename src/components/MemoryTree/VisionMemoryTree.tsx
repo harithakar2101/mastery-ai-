@@ -18,6 +18,7 @@ import {
   LayoutGrid,
   Maximize2,
   Activity,
+  Film,
 } from 'lucide-react';
 import { MemoryTree } from './MemoryTree';
 import { NodeStatus } from '../../types';
@@ -45,12 +46,50 @@ export const VisionMemoryTree: React.FC = () => {
     openWhyScoreDrawer,
     activeTrack,
     setActiveTrack,
+    setActiveVideoStoryboard,
   } = useTutor();
 
   const [aiPrompt, setAiPrompt] = useState('');
   const [hideBranches, setHideBranches] = useState(false);
   const [selectedNodeDetails, setSelectedNodeDetails] = useState<TreeNode | null>(null);
   const [viewMode, setViewMode] = useState<'canvas' | 'grid'>('canvas');
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+
+  // Auto-generate video from a student's weak concept (45 to 90 seconds micro-lesson)
+  const handleAutoGenerateWeakConceptVideo = async (targetNode?: TreeNode | null) => {
+    setIsGeneratingVideo(true);
+    let candidate = targetNode
+      ? dkmNodes.find(
+          n =>
+            n.id === targetNode.dkmId ||
+            n.name.toLowerCase().includes(targetNode.name.toLowerCase())
+        )
+      : [...dkmNodes].sort((a, b) => a.mastery - b.mastery)[0];
+
+    if (!candidate) candidate = dkmNodes[0];
+    if (candidate) setSelectedNode(candidate);
+
+    try {
+      const res = await fetch('/api/generate-video', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          topic: candidate?.name || 'Engineering Core Invariants',
+          misconception: candidate?.typicalTrap || 'Misinterpreting system boundaries',
+          subject_track: candidate?.track || activeTrack,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveVideoStoryboard(data);
+      }
+    } catch (e) {
+      console.warn('Failed to auto-generate video from weak concept:', e);
+    } finally {
+      setIsGeneratingVideo(false);
+      setCurrentWorkflow('AI_VIDEO');
+    }
+  };
 
   const TRACKS = [
     'All Tracks',
@@ -347,6 +386,15 @@ export const VisionMemoryTree: React.FC = () => {
             <Sparkles className="w-3 h-3" />
             <span>Progress Tree</span>
           </button>
+          <button
+            onClick={() => handleAutoGenerateWeakConceptVideo()}
+            disabled={isGeneratingVideo}
+            className="px-3 py-1 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer disabled:opacity-50"
+            title="Auto-generate 60s micro-lesson video targeting student's weakest concept"
+          >
+            <Film className="w-3.5 h-3.5" />
+            <span>{isGeneratingVideo ? 'Generating...' : '⚡ 60s Video'}</span>
+          </button>
         </div>
       </div>
 
@@ -498,6 +546,14 @@ export const VisionMemoryTree: React.FC = () => {
             </div>
           )}
 
+          <button
+            onClick={() => handleAutoGenerateWeakConceptVideo(selectedNodeDetails)}
+            disabled={isGeneratingVideo}
+            className="w-full py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+          >
+            <Film className="w-3.5 h-3.5" />
+            <span>{isGeneratingVideo ? 'Generating Micro-Lesson...' : '⚡ Auto-Generate 60s Video'}</span>
+          </button>
           <div className="flex gap-2 pt-1">
             <button
               onClick={() => {

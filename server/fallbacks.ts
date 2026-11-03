@@ -315,14 +315,22 @@ export function getTutoringFallback(tutorReq: any) {
 }
 
 export function getVideoFallback(topic?: string, misconception?: string) {
+  const cleanTopic = topic || 'Database Ports & Network Sockets';
+  const cleanMisconception = misconception || 'Connecting database driver directly to web port 80';
   return {
     title: `60s Micro-Mastery: ${topic || 'Database Ports & Network Sockets'}`,
     concept: topic || 'Network Sockets & Port Bindings',
     duration_secs: 60,
+    total_duration_secs: 60,
+    target_misconception: cleanMisconception,
     key_takeaway: 'Ports identify distinct processes on a machine. Database services listen on dedicated ports (e.g., MySQL 3306), distinct from HTTP (80/443).',
     scenes: [
       {
+        id: 'scene_1',
         scene_num: 1,
+        duration: 15,
+        visual_type: 'analogy',
+        on_screen_text: 'IP Address = Street Address\nPort = Specific Room Door\nDoor 80: HTTP Web Traffic\nDoor 3306: MySQL Database',
         time_range: '00:00 - 00:15',
         title: 'The Analogy: The Server Apartment Complex',
         visual_description: 'An animated server high-rise building with distinct front doors: Door 80 (Web Traffic), Door 443 (Secure Web), Door 3306 (MySQL Vault), Door 5432 (PostgreSQL).',
@@ -331,7 +339,11 @@ export function getVideoFallback(topic?: string, misconception?: string) {
         visual_elements: ['Server Tower', 'Door 80 [HTTP]', 'Door 3306 [MySQL]', 'Driver Packet'],
       },
       {
+        id: 'scene_2',
         scene_num: 2,
+        duration: 23,
+        visual_type: 'diagram',
+        on_screen_text: 'Client: PDO("mysql:host=localhost;port=80")\\nServer: HTTP/1.1 400 Bad Request\\nResult: ✖ Connection Refused (Port 80 speaks HTTP!)',
         time_range: '00:15 - 00:38',
         title: 'The Collision: Knocking on the Wrong Door',
         visual_description: 'PHP PDO driver arrives at Door 80 holding SQL credentials. Door 80 is an Apache/Nginx web worker speaking HTTP. It rejects the raw MySQL protocol with Connection Refused.',
@@ -340,7 +352,11 @@ export function getVideoFallback(topic?: string, misconception?: string) {
         visual_elements: ['PHP PDO Client', 'HTTP Server Rejection', 'Error 2002 Badge'],
       },
       {
+        id: 'scene_3',
         scene_num: 3,
+        duration: 22,
+        visual_type: 'code_diff',
+        on_screen_text: '- const dsn = "mysql:host=localhost;port=80"; // Wrong Port\\n+ const dsn = "mysql:host=localhost;port=3306"; // Dedicated Port\\nStatus: ✔ 200 OK Handshake Verified',
         time_range: '00:38 - 00:60',
         title: 'The Solution: Clean Port Handshake',
         visual_description: 'Connection string changes port to 3306. Packet enters MySQL vault, receives handshake ACK, and returns green authenticated state.',

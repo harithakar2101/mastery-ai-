@@ -44,6 +44,111 @@ if (geminiApiKey && geminiApiKey !== 'MY_GEMINI_API_KEY' && geminiApiKey.trim().
   }
 }
 
+export function getAiClient(): GoogleGenAI | null {
+  return aiClient;
+}
+
+export function pcmToWav(pcmData: Buffer, sampleRate = 24000, numChannels = 1, bitsPerSample = 16): Buffer {
+  const byteRate = (sampleRate * numChannels * bitsPerSample) / 8;
+  const blockAlign = (numChannels * bitsPerSample) / 8;
+  const subChunk2Size = pcmData.length;
+  const chunkSize = 36 + subChunk2Size;
+
+  const header = Buffer.alloc(44);
+  header.write('RIFF', 0);
+  header.writeUInt32LE(chunkSize, 4);
+  header.write('WAVE', 8);
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16);
+  header.writeUInt16LE(1, 20);
+  header.writeUInt16LE(numChannels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+  header.write('data', 36);
+  header.writeUInt32LE(subChunk2Size, 40);
+
+  return Buffer.concat([header, pcmData]);
+}
+
+export function createSyntheticWav(durationSeconds: number, frequency = 440, sampleRate = 24000): Buffer {
+  const numSamples = Math.floor(sampleRate * durationSeconds);
+  const pcmData = Buffer.alloc(numSamples * 2);
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    const sample = Math.sin(2 * Math.PI * frequency * t) * 0.3 * Math.exp(-0.5 * (t % 1.5));
+    const int16 = Math.max(-32768, Math.min(32767, Math.floor(sample * 32767)));
+    pcmData.writeInt16LE(int16, i * 2);
+  }
+  return pcmToWav(pcmData, sampleRate, 1, 16);
+}
+
+export async function generateGeminiTTS(text: string, voiceName = 'Puck'): Promise<{
+  audioAvailable: boolean;
+  audioBase64?: string;
+  format?: string;
+  reason?: string;
+}> {
+  const ttsModel = process.env.GEMINI_TTS_MODEL || 'gemini-2.0-flash';
+
+  if (!aiClient) {
+    return {
+      audioAvailable: false,
+      reason: 'Gemini TTS unavailable: GEMINI_API_KEY is not configured or offline',
+    };
+  }
+
+  try {
+    const response = await aiClient.models.generateContent({
+      model: ttsModel,
+      contents: `Please read this educational script aloud with a clear, engaging tone: "${text}"`,
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: {
+              voiceName,
+            },
+          },
+        },
+      },
+    });
+
+    const candidate = response.candidates?.[0];
+    const parts = candidate?.content?.parts || [];
+    for (const part of parts) {
+      if (part.inlineData && part.inlineData.data) {
+        const mime = part.inlineData.mimeType || 'audio/wav';
+        const rawBytes = Buffer.from(part.inlineData.data, 'base64');
+        if (mime.includes('pcm')) {
+          const wavBuffer = pcmToWav(rawBytes, 24000);
+          return {
+            audioAvailable: true,
+            audioBase64: wavBuffer.toString('base64'),
+            format: 'audio/wav',
+          };
+        }
+        return {
+          audioAvailable: true,
+          audioBase64: part.inlineData.data,
+          format: mime,
+        };
+      }
+    }
+
+    return {
+      audioAvailable: false,
+      reason: 'Gemini model did not return audio inline data',
+    };
+  } catch (err: any) {
+    return {
+      audioAvailable: false,
+      reason: cleanErrorMessage(err),
+    };
+  }
+}
+
 // 10-second server-side timeout with single retry on failure
 export async function callGeminiWithRetry<T>(
   prompt: string,
@@ -173,6 +278,9 @@ const VIDEO_RESPONSE_SCHEMA = {
         properties: {
           scene_num: { type: Type.INTEGER },
           time_range: { type: Type.STRING },
+          duration: { type: Type.INTEGER },
+          on_screen_text: { type: Type.STRING },
+          visual_type: { type: Type.STRING },
           title: { type: Type.STRING },
           visual_description: { type: Type.STRING },
           narration: { type: Type.STRING },
