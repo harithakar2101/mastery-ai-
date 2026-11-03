@@ -14,6 +14,14 @@ import { processLiveTranscriptRequest } from './gemini.ts';
 import { authenticate, requireRole } from './authMiddleware.ts';
 import { verifySessionToken, COOKIE_NAME, sendError } from './auth.ts';
 import { readStore } from './store.ts';
+import {
+  validateBody,
+  liveSessionStartSchema,
+  liveReleaseQuestionSchema,
+  liveSubmitAnswerSchema,
+  liveEngagementSchema,
+  liveTranscriptSchema,
+} from './validation.ts';
 
 export function registerLiveRoutes(app: Express) {
   // SSE Connection Stream: GET /api/live/stream
@@ -82,116 +90,133 @@ export function registerLiveRoutes(app: Express) {
   });
 
   // POST /api/live/session/start (teacher/admin only)
-  app.post('/api/live/session/start', authenticate, requireRole('teacher', 'admin'), (req: Request, res: Response) => {
-    try {
-      const { topicId, topicName, track } = req.body;
-      const session = startLiveSession({
-        topicId: topicId || 'web_apache_docroot',
-        topicName: topicName || 'Apache DocumentRoot & File Hierarchy',
-        track: track || 'Web Application Development',
-        teacherId: req.user!.id,
-      });
-      return res.json({ success: true, session });
-    } catch (err: any) {
-      return res.status(500).json({ error: 'Failed to start live session', details: err?.message });
+  app.post(
+    '/api/live/session/start',
+    authenticate,
+    requireRole('teacher', 'admin'),
+    validateBody(liveSessionStartSchema),
+    (req: Request, res: Response) => {
+      try {
+        const { topicId, topicName, track } = req.body;
+        const session = startLiveSession({
+          topicId: topicId || 'web_apache_docroot',
+          topicName: topicName || 'Apache DocumentRoot & File Hierarchy',
+          track: track || 'Web Application Development',
+          teacherId: req.user!.id,
+        });
+        return res.json({ success: true, session });
+      } catch (err: any) {
+        return sendError(res, 500, 'LIVE_START_ERROR', err?.message || 'Failed to start live session', req);
+      }
     }
-  });
+  );
 
   // POST /api/live/session/end (teacher/admin only)
-  app.post('/api/live/session/end', authenticate, requireRole('teacher', 'admin'), (_req: Request, res: Response) => {
+  app.post('/api/live/session/end', authenticate, requireRole('teacher', 'admin'), (req: Request, res: Response) => {
     try {
       const result = endLiveSession();
       return res.json(result);
     } catch (err: any) {
-      return res.status(500).json({ error: 'Failed to end live session', details: err?.message });
+      return sendError(res, 500, 'LIVE_END_ERROR', err?.message || 'Failed to end live session', req);
     }
   });
 
   // GET /api/live/session/state (authenticated)
-  app.get('/api/live/session/state', authenticate, (_req: Request, res: Response) => {
+  app.get('/api/live/session/state', authenticate, (req: Request, res: Response) => {
     try {
       const state = getLiveSessionState();
       return res.json(state);
     } catch (err: any) {
-      return res.status(500).json({ error: 'Failed to get live session state', details: err?.message });
+      return sendError(res, 500, 'LIVE_STATE_ERROR', err?.message || 'Failed to get live session state', req);
     }
   });
 
   // POST /api/live/transcript (teacher/admin only)
-  app.post('/api/live/transcript', authenticate, requireRole('teacher', 'admin'), async (req: Request, res: Response) => {
-    try {
-      const { transcript, track, topicId } = req.body;
-      if (!transcript) {
-        return res.status(400).json({ error: 'transcript is required' });
-      }
+  app.post(
+    '/api/live/transcript',
+    authenticate,
+    requireRole('teacher', 'admin'),
+    validateBody(liveTranscriptSchema),
+    async (req: Request, res: Response) => {
+      try {
+        const { transcript, track, topicId } = req.body;
+        const result = await processLiveTranscriptRequest(transcript, track, topicId);
+        if (result.timeline && Array.isArray(result.timeline)) {
+          setLiveTimeline(result.timeline);
+        }
 
-      const result = await processLiveTranscriptRequest(transcript, track, topicId);
-      if (result.timeline && Array.isArray(result.timeline)) {
-        setLiveTimeline(result.timeline);
+        return res.json({
+          success: true,
+          timeline: result.timeline || [],
+          source: result.source,
+          fallback_reason: result.fallback_reason,
+        });
+      } catch (err: any) {
+        return sendError(res, 500, 'TRANSCRIPT_ERROR', err?.message || 'Failed to process transcript', req);
       }
-
-      return res.json({
-        success: true,
-        timeline: result.timeline || [],
-        source: result.source,
-        fallback_reason: result.fallback_reason,
-      });
-    } catch (err: any) {
-      return res.status(500).json({ error: 'Failed to process transcript', details: err?.message });
     }
-  });
+  );
 
   // POST /api/live/release-question (teacher/admin only)
-  app.post('/api/live/release-question', authenticate, requireRole('teacher', 'admin'), (req: Request, res: Response) => {
-    try {
-      const { questionId } = req.body;
-      if (!questionId) {
-        return res.status(400).json({ error: 'questionId is required' });
-      }
+  app.post(
+    '/api/live/release-question',
+    authenticate,
+    requireRole('teacher', 'admin'),
+    validateBody(liveReleaseQuestionSchema),
+    (req: Request, res: Response) => {
+      try {
+        const { questionId } = req.body;
+        const releasedQuestion = releaseLiveQuestion(questionId);
+        if (!releasedQuestion) {
+          return sendError(res, 404, 'NOT_FOUND', `Question ${questionId} not found in session timeline`, req);
+        }
 
-      const releasedQuestion = releaseLiveQuestion(questionId);
-      if (!releasedQuestion) {
-        return res.status(404).json({ error: `Question ${questionId} not found in session timeline` });
+        return res.json({ success: true, releasedQuestion });
+      } catch (err: any) {
+        return sendError(res, 500, 'RELEASE_ERROR', err?.message || 'Failed to release question', req);
       }
-
-      return res.json({ success: true, releasedQuestion });
-    } catch (err: any) {
-      return res.status(500).json({ error: 'Failed to release question', details: err?.message });
     }
-  });
+  );
 
   // POST /api/live/submit-answer (authenticated student)
-  app.post('/api/live/submit-answer', authenticate, async (req: Request, res: Response) => {
-    try {
-      const { questionId, selectedIndex, lowEngagement } = req.body;
-      const studentId = req.user!.id; // Derived strictly from session token
-      if (!questionId || selectedIndex === undefined) {
-        return res.status(400).json({ error: 'questionId and selectedIndex are required' });
+  app.post(
+    '/api/live/submit-answer',
+    authenticate,
+    validateBody(liveSubmitAnswerSchema),
+    async (req: Request, res: Response) => {
+      try {
+        const { questionId, selectedIndex, lowEngagement } = req.body;
+        const studentId = req.user!.id; // Strictly from session token
+
+        const result = await submitLiveAnswer({
+          studentId,
+          questionId,
+          selectedIndex: Number(selectedIndex),
+          lowEngagement: Boolean(lowEngagement),
+        });
+
+        return res.json({ success: true, ...result });
+      } catch (err: any) {
+        return sendError(res, 500, 'SUBMIT_ANSWER_ERROR', err?.message || 'Failed to submit live answer', req);
       }
-
-      const result = await submitLiveAnswer({
-        studentId,
-        questionId,
-        selectedIndex: Number(selectedIndex),
-        lowEngagement: Boolean(lowEngagement),
-      });
-
-      return res.json({ success: true, ...result });
-    } catch (err: any) {
-      return res.status(500).json({ error: 'Failed to submit live answer', details: err?.message });
     }
-  });
+  );
 
   // POST /api/live/student-engagement (authenticated student)
-  app.post('/api/live/student-engagement', authenticate, (req: Request, res: Response) => {
-    try {
-      const { lowEngagement } = req.body;
-      const studentId = req.user!.id; // Derived strictly from session token
+  app.post(
+    '/api/live/student-engagement',
+    authenticate,
+    validateBody(liveEngagementSchema),
+    (req: Request, res: Response) => {
+      try {
+        const { lowEngagement } = req.body;
+        const studentId = req.user!.id; // Strictly from session token
 
-      updateStudentEngagement(studentId, Boolean(lowEngagement));
-      return res.json({ success: true });
-    } catch (err: any) {
-      return res.status(500).json({ error: 'Failed to update engagement', details: err?.message });
+        updateStudentEngagement(studentId, Boolean(lowEngagement));
+        return res.json({ success: true });
+      } catch (err: any) {
+        return sendError(res, 500, 'ENGAGEMENT_ERROR', err?.message || 'Failed to update engagement', req);
+      }
     }
-  });
+  );
 }

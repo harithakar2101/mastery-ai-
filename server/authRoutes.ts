@@ -158,7 +158,28 @@ authRouter.post('/logout', (_req: Request, res: Response) => {
   return res.json({ success: true, message: 'Logged out successfully.' });
 });
 
-// 4. Sign Out Everywhere (Token Rotation & Revocation)
+// 4. Token Refresh / Rotation
+authRouter.post('/refresh', authenticate, (req: Request, res: Response) => {
+  try {
+    const store = readStore();
+    const user = store.users.find(u => u.id === req.user!.id);
+    if (!user) {
+      return sendError(res, 404, 'NOT_FOUND', 'User not found', req);
+    }
+
+    const token = createSessionToken(user);
+    setSessionCookie(res, token);
+    return res.json({
+      success: true,
+      token,
+      user: sanitizeUser(user),
+    });
+  } catch (err: any) {
+    return sendError(res, 500, 'REFRESH_FAILED', err?.message || 'Token refresh failed', req);
+  }
+});
+
+// 5. Sign Out Everywhere (Token Rotation & Revocation)
 authRouter.post('/signout-all', authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -179,7 +200,7 @@ authRouter.post('/signout-all', authenticate, async (req: Request, res: Response
   }
 });
 
-// 5. Get Current Authenticated Profile
+// 6. Get Current Authenticated Profile
 authRouter.get('/me', authenticate, (req: Request, res: Response) => {
   const store = readStore();
   const user = store.users.find(u => u.id === req.user!.id);
@@ -199,7 +220,7 @@ authRouter.get('/me', authenticate, (req: Request, res: Response) => {
   });
 });
 
-// 6. Change Password
+// 7. Change Password
 authRouter.post('/change-password', authenticate, validateBody(changePasswordSchema), async (req: Request, res: Response) => {
   try {
     const { currentPassword, newPassword } = req.body;
@@ -239,7 +260,7 @@ authRouter.post('/change-password', authenticate, validateBody(changePasswordSch
   }
 });
 
-// 7. Delete My Account & All Associated Data
+// 8. Delete My Account & All Associated Data
 authRouter.post('/delete-account', authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -266,7 +287,7 @@ authRouter.post('/delete-account', authenticate, async (req: Request, res: Respo
   }
 });
 
-// 8. Export My Personal Data (JSON dump)
+// 9. Export My Personal Data (JSON dump)
 authRouter.get('/export-data', authenticate, (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;

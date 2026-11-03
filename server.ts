@@ -11,6 +11,7 @@ import {
   writeStoreAtomically,
   appendEvent,
   seedDemoStore,
+  type StoreUser,
 } from './server/store.ts';
 import {
   processTutoringRequest,
@@ -22,12 +23,21 @@ import {
 import { helmetMiddleware, corsMiddleware, globalLimiter, authLimiter, aiLimiter } from './server/security.ts';
 import { requestIdMiddleware, authenticate, requireRole } from './server/authMiddleware.ts';
 import { authRouter } from './server/authRoutes.ts';
-import { sendError } from './server/auth.ts';
+import { sendError, hashPassword } from './server/auth.ts';
 import {
   validateBody,
+  validateQuery,
   updateUserStateSchema,
   tutoringSchema,
+  videoGenerationSchema,
+  mockTestGenerationSchema,
+  libraryVaultSchema,
+  variantTaskSchema,
   pedagogicalEventSchema,
+  recordAttemptSchema,
+  createTeacherSchema,
+  attemptsQuerySchema,
+  storeCollectionQuerySchema,
 } from './server/validation.ts';
 import { registerLiveRoutes } from './server/liveRoutes.ts';
 import { registerTeacherRoutes } from './server/teacherRoutes.ts';
@@ -38,7 +48,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
+export const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 // Security & Infrastructure Middlewares
@@ -46,15 +56,94 @@ app.use(requestIdMiddleware);
 app.use(helmetMiddleware);
 app.use(corsMiddleware);
 app.use(cookieParser());
-app.use(express.json({ limit: '500kb' }));
-app.use(express.urlencoded({ extended: true, limit: '500kb' }));
+
+// Route-specific request body size limits
+// Default global limit is conservative 50kb
+app.use(express.json({ limit: '50kb' }));
+app.use(express.urlencoded({ extended: true, limit: '50kb' }));
 app.use(globalLimiter);
 
 // Ensure store.json is initialized atomically on startup
 ensureStoreExists();
 
-// Mount Authentication & Account Settings Routes with Dedicated Rate Limiter
-app.use('/api/auth', authLimiter, authRouter);
+// Mount Authentication & Account Settings Routes with Dedicated Rate Limiter (20kb body limit)
+app.use('/api/auth', express.json({ limit: '20kb' }), authLimiter, authRouter);
+
+// Admin Routes (Strictly Admin Role Only)
+app.post('/api/admin/create-teacher', authenticate, requireRole('admin'), validateBody(createTeacherSchema), async (req: Request, res: Response) => {
+  try {
+    const { email, password, name, degree } = req.body;
+    const normEmail = email.toLowerCase().trim();
+
+    const store = readStore();
+    const existing = store.users.find(u => u.email.toLowerCase() === normEmail);
+    if (existing) {
+      return sendError(res, 409, 'EMAIL_EXISTS', 'An account with this email address already exists.', req);
+    }
+
+    const userId = `FACULTY_${Math.floor(100 + Math.random() * 900)}`;
+    const passwordHash = await hashPassword(password);
+    const now = new Date().toISOString();
+
+    const newTeacher: StoreUser = {
+      id: userId,
+      name,
+      email: normEmail,
+      role: 'teacher',
+      plan: 'Campus License',
+      degree: degree || 'Department of Computer Science & Engineering',
+      preferredLanguages: ['python', 'cpp', 'javascript'],
+      streakDays: 1,
+      testsCompleted: 0,
+      overallMastery: 0.90,
+      theme: 'dark',
+      passwordHash,
+      tokenVersion: 1,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const newIslm = {
+      student_id: userId,
+      name,
+      email: normEmail,
+      role: 'teacher' as const,
+      course_track: 'Faculty Instruction & Research',
+      overall_mastery: 0.90,
+      topic_mastery: {},
+      recent_misconceptions: [],
+      scaffolding_tier_required: 1,
+      error_count: 0,
+      independent_solves: 0,
+      scaffolding_fading_index: 0.1,
+      time_spent_mins: 0,
+      history: [],
+    };
+
+    await writeStoreAtomically(s => {
+      s.users.push(newTeacher);
+      s.islm.push(newIslm);
+    });
+
+    const { passwordHash: _, ...safeUser } = newTeacher;
+    return res.status(201).json({
+      success: true,
+      message: 'Teacher account created successfully by administrator.',
+      user: safeUser,
+    });
+  } catch (err: any) {
+    return sendError(res, 500, 'ADMIN_TEACHER_CREATION_FAILED', err?.message || 'Failed to create teacher account', req);
+  }
+});
+
+app.post('/api/admin/seed-demo', authenticate, requireRole('admin'), async (req: Request, res: Response) => {
+  try {
+    const store = await seedDemoStore();
+    return res.json({ success: true, users: store.users.length, events: store.events.length });
+  } catch (err: any) {
+    return sendError(res, 500, 'SEED_ERROR', err?.message || 'Failed to seed demo data', req);
+  }
+});
 
 // Mount Live Class, Teacher Analytics, and Empirical Study routes (each protected with auth & roles)
 registerLiveRoutes(app);
@@ -83,70 +172,78 @@ app.get('/api/user/state', authenticate, (req: Request, res: Response) => {
 });
 
 // Endpoint: Sync User State to Server Store (Protected - Strict Ownership & Field Whitelisting)
-app.post('/api/user/state', authenticate, validateBody(updateUserStateSchema), async (req: Request, res: Response) => {
-  try {
-    const studentId = req.user!.id; // Strictly from authenticated session
-    const { islm, dkmNodes, sessions, userProfile } = req.body;
+// Higher body size limit (500kb) allocated specifically for knowledge graph state & session history
+app.post(
+  '/api/user/state',
+  authenticate,
+  express.json({ limit: '500kb' }),
+  validateBody(updateUserStateSchema),
+  async (req: Request, res: Response) => {
+    try {
+      const studentId = req.user!.id; // Strictly from authenticated session
+      const { islm, dkmNodes, sessions, userProfile } = req.body;
 
-    await writeStoreAtomically(store => {
-      // 1. Update whitelisted user profile fields only (never allow client mutation of role, id, or plan)
-      if (userProfile) {
-        const uIdx = store.users.findIndex(u => u.id === studentId);
-        if (uIdx >= 0) {
-          const current = store.users[uIdx];
-          store.users[uIdx] = {
-            ...current,
-            name: userProfile.name !== undefined ? userProfile.name : current.name,
-            theme: userProfile.theme !== undefined ? userProfile.theme : current.theme,
-            degree: userProfile.degree !== undefined ? userProfile.degree : current.degree,
-            preferredLanguages: userProfile.preferredLanguages !== undefined ? userProfile.preferredLanguages : current.preferredLanguages,
-            updatedAt: new Date().toISOString(),
-          };
+      await writeStoreAtomically(store => {
+        // 1. Update whitelisted user profile fields only (never allow client mutation of role, id, or plan)
+        if (userProfile) {
+          const uIdx = store.users.findIndex(u => u.id === studentId);
+          if (uIdx >= 0) {
+            const current = store.users[uIdx];
+            store.users[uIdx] = {
+              ...current,
+              name: userProfile.name !== undefined ? userProfile.name : current.name,
+              theme: userProfile.theme !== undefined ? userProfile.theme : current.theme,
+              degree: userProfile.degree !== undefined ? userProfile.degree : current.degree,
+              preferredLanguages: userProfile.preferredLanguages !== undefined ? userProfile.preferredLanguages : current.preferredLanguages,
+              avatar: userProfile.avatar !== undefined ? userProfile.avatar : current.avatar,
+              updatedAt: new Date().toISOString(),
+            };
+          }
         }
-      }
 
-      // 2. Update ISLM metrics for this student
-      if (islm) {
-        const iIdx = store.islm.findIndex(i => i.student_id === studentId);
-        if (iIdx >= 0) {
-          const prev = store.islm[iIdx];
-          store.islm[iIdx] = {
-            ...prev,
-            ...islm,
-            student_id: studentId,
-            role: prev.role, // Preserve server-authoritative role
-          };
-        } else {
-          store.islm.push({
-            ...islm,
-            student_id: studentId,
-            role: req.user!.role,
-          });
+        // 2. Update ISLM metrics for this student
+        if (islm) {
+          const iIdx = store.islm.findIndex(i => i.student_id === studentId);
+          if (iIdx >= 0) {
+            const prev = store.islm[iIdx];
+            store.islm[iIdx] = {
+              ...prev,
+              ...islm,
+              student_id: studentId,
+              role: prev.role, // Preserve server-authoritative role
+            };
+          } else {
+            store.islm.push({
+              ...islm,
+              student_id: studentId,
+              role: req.user!.role,
+            });
+          }
         }
-      }
 
-      // 3. Update personal session history
-      if (sessions && Array.isArray(sessions)) {
-        store.sessions = (store.sessions || []).filter(s => s.studentId !== studentId).concat(
-          sessions.map(s => ({ ...s, studentId }))
-        );
-      }
+        // 3. Update personal session history
+        if (sessions && Array.isArray(sessions)) {
+          store.sessions = (store.sessions || []).filter(s => s.studentId !== studentId).concat(
+            sessions.map(s => ({ ...s, studentId }))
+          );
+        }
 
-      // 4. Update personal DKM knowledge graph nodes
-      if (dkmNodes && Array.isArray(dkmNodes)) {
-        if (!store.dkmStates) store.dkmStates = {};
-        store.dkmStates[studentId] = dkmNodes;
-      }
-    });
+        // 4. Update personal DKM knowledge graph nodes
+        if (dkmNodes && Array.isArray(dkmNodes)) {
+          if (!store.dkmStates) store.dkmStates = {};
+          store.dkmStates[studentId] = dkmNodes;
+        }
+      });
 
-    return res.json({ success: true });
-  } catch (err: any) {
-    return sendError(res, 500, 'STATE_SAVE_ERROR', err?.message || 'Failed to save user state', req);
+      return res.json({ success: true });
+    } catch (err: any) {
+      return sendError(res, 500, 'STATE_SAVE_ERROR', err?.message || 'Failed to save user state', req);
+    }
   }
-});
+);
 
 // Endpoint: Scoped Store Collection Read (Protected - ownership enforced)
-app.get('/api/store/:collection', authenticate, (req: Request, res: Response) => {
+app.get('/api/store/:collection', authenticate, validateQuery(storeCollectionQuerySchema), (req: Request, res: Response) => {
   try {
     const { collection } = req.params;
     const store = readStore();
@@ -243,12 +340,12 @@ app.post('/api/store/:collection', authenticate, async (req: Request, res: Respo
   }
 });
 
-// Endpoint: Append-Only Pedagogical Events (Protected - studentId always enforced)
+// Endpoint: Append-Only Pedagogical Events (Protected - studentId always enforced from session)
 app.post('/api/events', authenticate, validateBody(pedagogicalEventSchema), async (req: Request, res: Response) => {
   try {
     const event = await appendEvent({
       ...req.body,
-      studentId: req.user!.id, // Always from session
+      studentId: req.user!.id, // Always from authenticated session
     });
     return res.json({ success: true, event });
   } catch (err: any) {
@@ -256,117 +353,11 @@ app.post('/api/events', authenticate, validateBody(pedagogicalEventSchema), asyn
   }
 });
 
-// Endpoint: Admin Seed Demo Data Action (Strictly Admin Only)
-app.post('/api/admin/seed-demo', authenticate, requireRole('admin'), async (req: Request, res: Response) => {
-  try {
-    const store = await seedDemoStore();
-    return res.json({ success: true, users: store.users.length, events: store.events.length });
-  } catch (err: any) {
-    return sendError(res, 500, 'SEED_ERROR', err?.message || 'Failed to seed demo data', req);
-  }
-});
-
-// Endpoint: Socratic Tutoring Engine (Protected & Rate Limited)
-app.post('/api/tutoring', authenticate, aiLimiter, validateBody(tutoringSchema), async (req: Request, res: Response) => {
-  res.setHeader('Cache-Control', 'no-store');
-  try {
-    const tutorReq = {
-      ...req.body,
-      student_id: req.user!.id, // Derived strictly from session
-    };
-
-    const response = await processTutoringRequest(tutorReq);
-
-    // Record interaction event
-    appendEvent({
-      studentId: tutorReq.student_id,
-      type: 'TUTORING_INTERACTION',
-      conceptId: tutorReq.current_topic || 'general',
-      topicId: tutorReq.current_topic || 'general',
-      payload: {
-        inputLength: (tutorReq.student_input || '').length,
-        workflow: tutorReq.workflow,
-        tier: response.scaffolding_response?.current_tier,
-        issueType: response.diagnosis?.issue_type,
-        source: response.source,
-        fallbackReason: response.fallback_reason,
-      },
-      synthetic: false,
-    }).catch(err => console.warn('Failed to record tutor event:', err));
-
-    // Persist intervention
-    if (response.scaffolding_response) {
-      writeStoreAtomically(store => {
-        store.interventions.push({
-          id: `int_${Date.now()}`,
-          studentId: tutorReq.student_id,
-          timestamp: new Date().toISOString(),
-          tier: response.scaffolding_response.current_tier,
-          issueType: response.diagnosis?.issue_type || 'CONCEPTUAL_GAP',
-          refusalReason: response.scaffolding_response.refusal_reason,
-          tutorMessage: response.scaffolding_response.tutor_message,
-          socraticQuestion: response.scaffolding_response.socratic_question,
-          conceptId: tutorReq.current_topic,
-        });
-      }).catch(err => console.warn('Failed to store intervention:', err));
-    }
-
-    return res.json(response);
-  } catch (err: any) {
-    console.error('Tutoring API error:', err);
-    return sendError(res, 500, 'TUTORING_ERROR', err?.message || 'Tutoring engine failure', req);
-  }
-});
-
-// Endpoint: AI Video Storyboard Generator (Protected & Rate Limited)
-app.post('/api/generate-video', authenticate, aiLimiter, async (req: Request, res: Response) => {
-  try {
-    const { topic, misconception, subject_track } = req.body;
-    const result = await processVideoRequest(topic, misconception, subject_track);
-    return res.json(result);
-  } catch (err: any) {
-    return sendError(res, 500, 'AI_VIDEO_ERROR', err?.message || 'Video generation failed', req);
-  }
-});
-
-// Endpoint: AI Mock Test Generator (Protected & Rate Limited)
-app.post('/api/generate-mock-test', authenticate, aiLimiter, async (req: Request, res: Response) => {
-  try {
-    const { track, red_nodes, difficulty } = req.body;
-    const result = await processMockTestRequest(track, red_nodes, difficulty);
-    return res.json(result);
-  } catch (err: any) {
-    return sendError(res, 500, 'AI_MOCK_TEST_ERROR', err?.message || 'Mock test generation failed', req);
-  }
-});
-
-// Endpoint: Library Vault Processor (Protected & Rate Limited)
-app.post('/api/library-vault/process', authenticate, aiLimiter, async (req: Request, res: Response) => {
-  try {
-    const { document_title, text_content, subject_track } = req.body;
-    const result = await processLibraryRequest(document_title, text_content, subject_track);
-    return res.json(result);
-  } catch (err: any) {
-    return sendError(res, 500, 'AI_VAULT_ERROR', err?.message || 'Library extraction failed', req);
-  }
-});
-
-// Endpoint: AI Independent Variant Problem Generator (Protected & Rate Limited)
-app.post('/api/variant', authenticate, aiLimiter, async (req: Request, res: Response) => {
-  try {
-    const { conceptId, conceptName, track, language } = req.body;
-    const result = await processVariantRequest(conceptId, conceptName, track, language);
-    return res.json(result);
-  } catch (err: any) {
-    return sendError(res, 500, 'AI_VARIANT_ERROR', err?.message || 'Variant generation failed', req);
-  }
-});
-
-// Endpoint: Record and Evaluate Student Attempt (Protected - studentId always enforced)
-app.post('/api/attempts', authenticate, async (req: Request, res: Response) => {
+// Endpoint: Record and Evaluate Student Attempt (Protected - studentId always enforced from session)
+app.post('/api/attempts', authenticate, validateBody(recordAttemptSchema), async (req: Request, res: Response) => {
   try {
     const attemptData = req.body;
-    const studentId = req.user!.id; // Derived strictly from session
+    const studentId = req.user!.id; // Strictly from session
     const store = readStore();
     const studentAttempts = (store.attempts || []).filter(
       (a: any) => a.studentId === studentId && a.conceptId === attemptData.conceptId
@@ -420,8 +411,8 @@ app.post('/api/attempts', authenticate, async (req: Request, res: Response) => {
     await appendEvent({
       studentId: newAttempt.studentId,
       type: 'ATTEMPT_EVALUATED',
-      conceptId: newAttempt.conceptId,
-      topicId: newAttempt.conceptId,
+      conceptId: newAttempt.conceptId || 'general',
+      topicId: newAttempt.conceptId || 'general',
       payload: newAttempt,
       synthetic: false,
     });
@@ -433,7 +424,7 @@ app.post('/api/attempts', authenticate, async (req: Request, res: Response) => {
 });
 
 // Endpoint: Fetch attempts for student (Protected - foreign student inspection blocked for students)
-app.get('/api/attempts', authenticate, (req: Request, res: Response) => {
+app.get('/api/attempts', authenticate, validateQuery(attemptsQuerySchema), (req: Request, res: Response) => {
   try {
     const requestedStudentId = req.query.studentId as string;
     const conceptId = req.query.conceptId as string;
@@ -460,6 +451,134 @@ app.get('/api/attempts', authenticate, (req: Request, res: Response) => {
   }
 });
 
+// Endpoint: Socratic Tutoring Engine (Protected & Rate Limited)
+app.post(
+  '/api/tutoring',
+  authenticate,
+  express.json({ limit: '100kb' }),
+  aiLimiter,
+  validateBody(tutoringSchema),
+  async (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+      const tutorReq = {
+        ...req.body,
+        student_id: req.user!.id, // Derived strictly from session
+      };
+
+      const response = await processTutoringRequest(tutorReq);
+
+      // Record interaction event
+      appendEvent({
+        studentId: tutorReq.student_id,
+        type: 'TUTORING_INTERACTION',
+        conceptId: tutorReq.current_topic || 'general',
+        topicId: tutorReq.current_topic || 'general',
+        payload: {
+          inputLength: (tutorReq.student_input || '').length,
+          workflow: tutorReq.workflow,
+          tier: response.scaffolding_response?.current_tier,
+          issueType: response.diagnosis?.issue_type,
+          source: response.source,
+          fallbackReason: response.fallback_reason,
+        },
+        synthetic: false,
+      }).catch(err => console.warn('Failed to record tutor event:', err));
+
+      // Persist intervention
+      if (response.scaffolding_response) {
+        writeStoreAtomically(store => {
+          store.interventions.push({
+            id: `int_${Date.now()}`,
+            studentId: tutorReq.student_id,
+            timestamp: new Date().toISOString(),
+            tier: response.scaffolding_response.current_tier,
+            issueType: response.diagnosis?.issue_type || 'CONCEPTUAL_GAP',
+            refusalReason: response.scaffolding_response.refusal_reason,
+            tutorMessage: response.scaffolding_response.tutor_message,
+            socraticQuestion: response.scaffolding_response.socratic_question,
+            conceptId: tutorReq.current_topic,
+          });
+        }).catch(err => console.warn('Failed to store intervention:', err));
+      }
+
+      return res.json(response);
+    } catch (err: any) {
+      console.error('Tutoring API error:', err);
+      return sendError(res, 500, 'TUTORING_ERROR', err?.message || 'Tutoring engine failure', req);
+    }
+  }
+);
+
+// Endpoint: AI Video Storyboard Generator (Protected & Rate Limited)
+app.post(
+  '/api/generate-video',
+  authenticate,
+  aiLimiter,
+  validateBody(videoGenerationSchema),
+  async (req: Request, res: Response) => {
+    try {
+      const { topic, misconception, subject_track } = req.body;
+      const result = await processVideoRequest(topic, misconception, subject_track);
+      return res.json(result);
+    } catch (err: any) {
+      return sendError(res, 500, 'AI_VIDEO_ERROR', err?.message || 'Video generation failed', req);
+    }
+  }
+);
+
+// Endpoint: AI Mock Test Generator (Protected & Rate Limited)
+app.post(
+  '/api/generate-mock-test',
+  authenticate,
+  aiLimiter,
+  validateBody(mockTestGenerationSchema),
+  async (req: Request, res: Response) => {
+    try {
+      const { track, red_nodes, difficulty } = req.body;
+      const result = await processMockTestRequest(track, red_nodes, difficulty);
+      return res.json(result);
+    } catch (err: any) {
+      return sendError(res, 500, 'AI_MOCK_TEST_ERROR', err?.message || 'Mock test generation failed', req);
+    }
+  }
+);
+
+// Endpoint: Library Vault Processor (Protected & Rate Limited - 2mb body size limit)
+app.post(
+  '/api/library-vault/process',
+  authenticate,
+  express.json({ limit: '2mb' }),
+  aiLimiter,
+  validateBody(libraryVaultSchema),
+  async (req: Request, res: Response) => {
+    try {
+      const { document_title, text_content, subject_track } = req.body;
+      const result = await processLibraryRequest(document_title, text_content, subject_track);
+      return res.json(result);
+    } catch (err: any) {
+      return sendError(res, 500, 'AI_VAULT_ERROR', err?.message || 'Library extraction failed', req);
+    }
+  }
+);
+
+// Endpoint: AI Independent Variant Problem Generator (Protected & Rate Limited)
+app.post(
+  '/api/variant',
+  authenticate,
+  aiLimiter,
+  validateBody(variantTaskSchema),
+  async (req: Request, res: Response) => {
+    try {
+      const { conceptId, conceptName, track, language } = req.body;
+      const result = await processVariantRequest(conceptId, conceptName, track, language);
+      return res.json(result);
+    } catch (err: any) {
+      return sendError(res, 500, 'AI_VARIANT_ERROR', err?.message || 'Variant generation failed', req);
+    }
+  }
+);
+
 // Endpoint: System Security and Reliability Audit
 app.get('/api/security-audit', (_req: Request, res: Response) => {
   res.json({
@@ -474,7 +593,7 @@ app.get('/api/security-audit', (_req: Request, res: Response) => {
       {
         check_name: 'Strict Role-Based Access Control (RBAC)',
         passed: true,
-        details: 'Server-side role derivation (student, teacher, admin). Teacher invite code required for faculty roles. Client headers cannot override role.',
+        details: 'Server-side role derivation (student, teacher, admin). Teacher invite code or admin creation required. Client headers cannot override role.',
       },
       {
         check_name: 'Route Ownership & State Protection',
@@ -502,13 +621,16 @@ app.get('/api/security-audit', (_req: Request, res: Response) => {
 
 // Centralized Express Error Handler
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
+  if (err.type === 'entity.too.large') {
+    return sendError(res, 413, 'PAYLOAD_TOO_LARGE', `Request entity too large. Limit is ${err.limit} bytes.`, req);
+  }
   console.error('Unhandled server error:', err);
-  sendError(res, err.status || 500, err.code || 'INTERNAL_ERROR', err.message || 'An internal error occurred', req);
+  sendError(res, err.status || 500, err.code || 'INTERNAL_ERROR', err.message || 'An internal server error occurred', req);
 });
 
 // Server boot and Vite mount
-async function startServer() {
-  if (process.env.NODE_ENV !== 'production') {
+export async function startServer() {
+  if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: {
@@ -558,7 +680,7 @@ async function startServer() {
         next(e);
       }
     });
-  } else {
+  } else if (process.env.NODE_ENV === 'production') {
     const distPath = path.resolve(__dirname, 'dist');
     app.use(express.static(distPath));
     app.get('*', (_req, res) => {
@@ -566,9 +688,19 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`CogniCSE Pedagogical Engine server running on port ${PORT}`);
-  });
+  if (process.env.NODE_ENV !== 'test') {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`CogniCSE Pedagogical Engine server running on port ${PORT}`);
+    });
+  }
 }
 
-startServer();
+const isMainModule = process.argv[1] && (
+  fileURLToPath(import.meta.url) === path.resolve(process.argv[1]) ||
+  process.argv[1].endsWith('server.ts')
+);
+const isTestMode = process.env.NODE_ENV === 'test' || process.argv.some(arg => arg.includes('test'));
+
+if (isMainModule && !isTestMode) {
+  startServer();
+}

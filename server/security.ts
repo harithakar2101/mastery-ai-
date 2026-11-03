@@ -53,10 +53,12 @@ export function corsMiddleware(req: Request, res: Response, next: NextFunction) 
   next();
 }
 
-// 3. Rate Limiters with standard error JSON format
+const isTest = process.env.NODE_ENV === 'test';
+
+// 3. Multi-tier Rate Limiters with standard error JSON format
 export const globalLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 200,
+  max: isTest ? 5000 : 300,
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
@@ -65,8 +67,8 @@ export const globalLimiter = rateLimit({
 });
 
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 25, // Stricter limit on auth routes to prevent brute-force attacks
+  windowMs: isTest ? 1000 : 15 * 60 * 1000, // 15 minutes
+  max: isTest ? 1000 : 25, // Stricter limit on auth routes to prevent brute-force attacks
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {
@@ -76,7 +78,7 @@ export const authLimiter = rateLimit({
 
 export const aiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 30, // Stricter limit on AI routes
+  max: isTest ? 1000 : 30, // Stricter limit on AI routes
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req, res) => {

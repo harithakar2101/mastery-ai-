@@ -2,6 +2,8 @@ import { type Express, type Request, type Response } from 'express';
 import { readStore, writeStoreAtomically } from './store.ts';
 import { processInterventionSuggestionsRequest } from './gemini.ts';
 import { authenticate, requireRole } from './authMiddleware.ts';
+import { sendError } from './auth.ts';
+import { validateBody, approveInterventionSchema, dismissInterventionSchema } from './validation.ts';
 
 export function registerTeacherRoutes(app: Express) {
   // All teacher routes require a valid session with teacher or admin role
@@ -182,7 +184,7 @@ export function registerTeacherRoutes(app: Express) {
       });
     } catch (err: any) {
       console.error('Teacher cohort analytics error:', err);
-      return res.status(500).json({ error: 'Failed to compute cohort analytics', details: err?.message });
+      return sendError(res, 500, 'COHORT_ANALYTICS_ERROR', err?.message || 'Failed to compute cohort analytics', req);
     }
   });
 
@@ -195,17 +197,14 @@ export function registerTeacherRoutes(app: Express) {
       const result = await processInterventionSuggestionsRequest(students, dkmNodes);
       return res.json(result);
     } catch (err: any) {
-      return res.status(500).json({ error: 'Failed to generate intervention suggestions', details: err?.message });
+      return sendError(res, 500, 'SUGGESTION_ERROR', err?.message || 'Failed to generate intervention suggestions', req);
     }
   });
 
   // POST /api/teacher/interventions/approve
-  app.post('/api/teacher/interventions/approve', async (req: Request, res: Response) => {
+  app.post('/api/teacher/interventions/approve', validateBody(approveInterventionSchema), async (req: Request, res: Response) => {
     try {
       const { interventionId, studentId, studentName, conceptId, tutorMessage, socraticQuestion } = req.body;
-      if (!interventionId) {
-        return res.status(400).json({ error: 'interventionId is required' });
-      }
 
       let approvedItem: any = null;
 
@@ -242,17 +241,14 @@ export function registerTeacherRoutes(app: Express) {
 
       return res.json({ success: true, intervention: approvedItem });
     } catch (err: any) {
-      return res.status(500).json({ error: 'Failed to approve intervention', details: err?.message });
+      return sendError(res, 500, 'INTERVENTION_APPROVE_ERROR', err?.message || 'Failed to approve intervention', req);
     }
   });
 
   // POST /api/teacher/interventions/dismiss
-  app.post('/api/teacher/interventions/dismiss', async (req: Request, res: Response) => {
+  app.post('/api/teacher/interventions/dismiss', validateBody(dismissInterventionSchema), async (req: Request, res: Response) => {
     try {
       const { interventionId } = req.body;
-      if (!interventionId) {
-        return res.status(400).json({ error: 'interventionId is required' });
-      }
 
       await writeStoreAtomically(store => {
         if (!store.interventions) store.interventions = [];
@@ -264,7 +260,7 @@ export function registerTeacherRoutes(app: Express) {
 
       return res.json({ success: true });
     } catch (err: any) {
-      return res.status(500).json({ error: 'Failed to dismiss intervention', details: err?.message });
+      return sendError(res, 500, 'INTERVENTION_DISMISS_ERROR', err?.message || 'Failed to dismiss intervention', req);
     }
   });
 
@@ -320,7 +316,7 @@ export function registerTeacherRoutes(app: Express) {
       res.setHeader('Content-Disposition', 'attachment; filename="cognicse_cohort_metrics.csv"');
       return res.status(200).send(csvContent);
     } catch (err: any) {
-      return res.status(500).json({ error: 'Failed to export CSV', details: err?.message });
+      return sendError(res, 500, 'CSV_EXPORT_ERROR', err?.message || 'Failed to export CSV', _req);
     }
   });
 }

@@ -3,6 +3,10 @@ import { readStore, writeStoreAtomically, appendEvent } from './store.ts';
 import { callGeminiWithRetry, cleanErrorMessage } from './gemini.ts';
 import { generateSyntheticStudyData } from './studyDemoSeeder.ts';
 import { computeStudyMetricsAndStats } from './studyMetricsCalculator.ts';
+import { getDefaultStudyItems } from './studyDefaultItems.ts';
+import { authenticate, requireRole } from './authMiddleware.ts';
+import { sendError } from './auth.ts';
+import { validateBody, studyCreateSchema, studyRecordEventSchema } from './validation.ts';
 
 export interface StudyItem {
   id: string;
@@ -39,9 +43,6 @@ export interface StudyDefinition {
   updatedAt: string;
 }
 
-import { getDefaultStudyItems } from './studyDefaultItems.ts';
-import { authenticate, requireRole } from './authMiddleware.ts';
-
 export function registerStudyRoutes(app: Express) {
   // 1. Get all studies (authenticated)
   app.get('/api/studies', authenticate, (_req: Request, res: Response) => {
@@ -51,12 +52,9 @@ export function registerStudyRoutes(app: Express) {
   });
 
   // 2. Create study (teacher/admin only)
-  app.post('/api/studies', authenticate, requireRole('teacher', 'admin'), async (req: Request, res: Response) => {
+  app.post('/api/studies', authenticate, requireRole('teacher', 'admin'), validateBody(studyCreateSchema), async (req: Request, res: Response) => {
     try {
       const { title, topicId, topicName, description, masteryThreshold, enableArmC } = req.body;
-      if (!title || !topicId) {
-        return res.status(400).json({ error: 'Title and topicId are required' });
-      }
 
       const studyId = `study_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
       const defaultItems = getDefaultStudyItems(topicId, topicName || topicId);
@@ -112,7 +110,7 @@ export function registerStudyRoutes(app: Express) {
       return res.status(201).json({ study: newStudy });
     } catch (err: any) {
       console.error('Failed to create study:', err);
-      return res.status(500).json({ error: err.message || 'Internal error' });
+      return sendError(res, 500, 'STUDY_CREATE_ERROR', err?.message || 'Failed to create study', req);
     }
   });
 
@@ -123,7 +121,7 @@ export function registerStudyRoutes(app: Express) {
     const studies: StudyDefinition[] = (store as any).studyDefinitions || [];
     const study = studies.find(s => s.id === id);
     if (!study) {
-      return res.status(404).json({ error: 'Study not found' });
+      return sendError(res, 404, 'NOT_FOUND', `Study ${id} not found`, req);
     }
     return res.json({ study });
   });
@@ -136,7 +134,7 @@ export function registerStudyRoutes(app: Express) {
       const studies: StudyDefinition[] = (store as any).studyDefinitions || [];
       const studyIndex = studies.findIndex(s => s.id === id);
       if (studyIndex === -1) {
-        return res.status(404).json({ error: 'Study not found' });
+        return sendError(res, 404, 'NOT_FOUND', `Study ${id} not found`, req);
       }
 
       const study = studies[studyIndex];
@@ -195,7 +193,7 @@ Return valid JSON with an array named "items" containing objects with:
       });
     } catch (err: any) {
       console.error('Failed to generate study items:', err);
-      return res.status(500).json({ error: err.message });
+      return sendError(res, 500, 'ITEM_GENERATION_ERROR', err?.message || 'Failed to generate study items', req);
     }
   });
 
@@ -205,7 +203,7 @@ Return valid JSON with an array named "items" containing objects with:
       const { id } = req.params;
       const { items } = req.body;
       if (!Array.isArray(items)) {
-        return res.status(400).json({ error: 'items array is required' });
+        return sendError(res, 400, 'VALIDATION_ERROR', 'items array is required', req);
       }
 
       await writeStoreAtomically(st => {
@@ -219,7 +217,7 @@ Return valid JSON with an array named "items" containing objects with:
 
       return res.json({ success: true, count: items.length });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return sendError(res, 500, 'ITEM_UPDATE_ERROR', err?.message || 'Failed to update study items', req);
     }
   });
 
@@ -232,7 +230,7 @@ Return valid JSON with an array named "items" containing objects with:
       const studies: StudyDefinition[] = (store as any).studyDefinitions || [];
       const study = studies.find(s => s.id === id);
       if (!study) {
-        return res.status(404).json({ error: 'Study not found' });
+        return sendError(res, 404, 'NOT_FOUND', `Study ${id} not found`, req);
       }
 
       await writeStoreAtomically(st => {
@@ -261,7 +259,7 @@ Return valid JSON with an array named "items" containing objects with:
 
       return res.json({ success: true });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return sendError(res, 500, 'ASSIGN_ERROR', err?.message || 'Failed to assign study arms', req);
     }
   });
 
@@ -273,7 +271,7 @@ Return valid JSON with an array named "items" containing objects with:
       const studies: StudyDefinition[] = (store as any).studyDefinitions || [];
       const study = studies.find(s => s.id === id);
       if (!study) {
-        return res.status(404).json({ error: 'Study not found' });
+        return sendError(res, 404, 'NOT_FOUND', `Study ${id} not found`, req);
       }
 
       const { syntheticUsers, syntheticISLM, newEvents, armAssignments } = generateSyntheticStudyData(
@@ -313,7 +311,7 @@ Return valid JSON with an array named "items" containing objects with:
       });
     } catch (err: any) {
       console.error('Failed to seed demo study:', err);
-      return res.status(500).json({ error: err.message });
+      return sendError(res, 500, 'SEED_STUDY_ERROR', err?.message || 'Failed to seed study demo data', req);
     }
   });
 
@@ -330,7 +328,7 @@ Return valid JSON with an array named "items" containing objects with:
       });
       return res.json({ success: removed });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return sendError(res, 500, 'DELETE_EVENT_ERROR', err?.message || 'Failed to delete event', req);
     }
   });
 
@@ -347,16 +345,16 @@ Return valid JSON with an array named "items" containing objects with:
       });
       return res.json({ success: true, removedCount });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return sendError(res, 500, 'CLEAR_EVENTS_ERROR', err?.message || 'Failed to clear study events', req);
     }
   });
 
-  // 10. Record a study event (student/authenticated)
-  app.post('/api/studies/:id/record-event', authenticate, async (req: Request, res: Response) => {
+  // 10. Record a study event (Protected - studentId always strictly derived from session)
+  app.post('/api/studies/:id/record-event', authenticate, validateBody(studyRecordEventSchema), async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
       const { armId, stage, score, passed, durationSec, hintsRequested, repeatedError, isTransferTask } = req.body;
-      const studentId = req.user!.role === 'student' ? req.user!.id : (req.body.studentId || req.user!.id);
+      const studentId = req.user!.id; // Strictly derived from session token
 
       let eventType = 'STUDY_PRE_TEST_ANSWER';
       if (stage === 'learning') eventType = 'STUDY_LEARNING_ATTEMPT';
@@ -384,7 +382,7 @@ Return valid JSON with an array named "items" containing objects with:
 
       return res.json({ success: true, event });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return sendError(res, 500, 'RECORD_EVENT_ERROR', err?.message || 'Failed to record study event', req);
     }
   });
 
@@ -396,7 +394,7 @@ Return valid JSON with an array named "items" containing objects with:
       const studies: StudyDefinition[] = (store as any).studyDefinitions || [];
       const study = studies.find(s => s.id === id);
       if (!study) {
-        return res.status(404).json({ error: 'Study not found' });
+        return sendError(res, 404, 'NOT_FOUND', `Study ${id} not found`, req);
       }
 
       const allEvents = store.events || [];
@@ -405,7 +403,7 @@ Return valid JSON with an array named "items" containing objects with:
       return res.json(computed);
     } catch (err: any) {
       console.error('Failed to compute study results:', err);
-      return res.status(500).json({ error: err.message });
+      return sendError(res, 500, 'STUDY_RESULTS_ERROR', err?.message || 'Failed to compute study results', req);
     }
   });
 
@@ -416,7 +414,7 @@ Return valid JSON with an array named "items" containing objects with:
       const store = readStore();
       const studies: StudyDefinition[] = (store as any).studyDefinitions || [];
       const study = studies.find(s => s.id === id);
-      if (!study) return res.status(404).send('Study not found');
+      if (!study) return sendError(res, 404, 'NOT_FOUND', `Study ${id} not found`, req);
 
       const studyEvents = (store.events || []).filter(e => e.payload?.studyId === id);
 
@@ -457,7 +455,7 @@ Return valid JSON with an array named "items" containing objects with:
       res.setHeader('Content-Disposition', `attachment; filename=study_${id}_raw_events.csv`);
       return res.send(csvContent);
     } catch (err: any) {
-      return res.status(500).send(err.message);
+      return sendError(res, 500, 'EXPORT_CSV_ERROR', err?.message || 'Failed to export CSV', req);
     }
   });
 
@@ -468,7 +466,7 @@ Return valid JSON with an array named "items" containing objects with:
       const store = readStore();
       const studies: StudyDefinition[] = (store as any).studyDefinitions || [];
       const study = studies.find(s => s.id === id);
-      if (!study) return res.status(404).json({ error: 'Study not found' });
+      if (!study) return sendError(res, 404, 'NOT_FOUND', `Study ${id} not found`, req);
 
       const studyEvents = (store.events || []).filter(e => e.payload?.studyId === id);
       return res.json({
@@ -477,7 +475,7 @@ Return valid JSON with an array named "items" containing objects with:
         exportedAt: new Date().toISOString(),
       });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return sendError(res, 500, 'EXPORT_JSON_ERROR', err?.message || 'Failed to export JSON', req);
     }
   });
 }
