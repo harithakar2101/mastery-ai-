@@ -60,6 +60,13 @@ const __dirname = path.dirname(__filename);
 export const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
+process.on('uncaughtException', (err) => {
+  console.error('[UNCAUGHT EXCEPTION]', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[UNHANDLED REJECTION]', reason);
+});
+
 // Security & Infrastructure Middlewares
 app.use(requestIdMiddleware);
 app.use(helmetMiddleware);
@@ -797,8 +804,19 @@ export async function startServer() {
   }
 
   if (process.env.NODE_ENV !== 'test') {
-    app.listen(PORT, '0.0.0.0', () => {
+    const srv = app.listen(PORT, '0.0.0.0', () => {
       console.log(`CogniCSE Pedagogical Engine server running on port ${PORT}`);
+    });
+    srv.on('error', (err: any) => {
+      if (err.code === 'EADDRINUSE') {
+        const altPort = PORT + 1;
+        console.warn(`[PORT CONFLICT] Port ${PORT} is busy, failing over to port ${altPort}`);
+        app.listen(altPort, '0.0.0.0', () => {
+          console.log(`CogniCSE Pedagogical Engine server running on port ${altPort}`);
+        });
+      } else {
+        console.error('Server listen error:', err);
+      }
     });
   }
 }
