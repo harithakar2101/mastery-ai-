@@ -1,0 +1,6 @@
+{
+  "name": "CogniCSE - 1-on-1 CSE Pedagogical Learning Support System",
+  "description": "Intelligent 1-on-1 pedagogical AI tutoring system for Computer Science & Engineering with Socratic 4-tier scaffolding, ISLM profile modeling, interactive code sandbox, memory tree, video generator, and mock tests.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

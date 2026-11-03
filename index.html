@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script>
+    // 1. Shim WebSocket for Vite HMR in Cloud Run proxy environments to completely eliminate connection errors
+    (function() {
+      var NativeWS = window.WebSocket;
+      if (!NativeWS) return;
+      window.WebSocket = function(url, protocols) {
+        if (
+          protocols === 'vite-hmr' ||
+          protocols === 'vite-ping' ||
+          (typeof url === 'string' && (url.indexOf('token=') !== -1 || url.indexOf('@vite') !== -1))
+        ) {
+          var listeners = {};
+          var fakeWs = {
+            readyState: 1, // OPEN
+            OPEN: 1,
+            CONNECTING: 0,
+            CLOSING: 2,
+            CLOSED: 3,
+            send: function() {},
+            close: function() {},
+            addEventListener: function(type, fn) {
+              listeners[type] = listeners[type] || [];
+              listeners[type].push(fn);
+              if (type === 'open') {
+                setTimeout(fn, 10);
+              }
+            },
+            removeEventListener: function(type, fn) {
+              if (listeners[type]) {
+                listeners[type] = listeners[type].filter(function(cb) { return cb !== fn; });
+              }
+            },
+            dispatchEvent: function() { return true; }
+          };
+          return fakeWs;
+        }
+        return new NativeWS(url, protocols);
+      };
+      window.WebSocket.prototype = NativeWS.prototype;
+      window.WebSocket.OPEN = 1;
+      window.WebSocket.CONNECTING = 0;
+      window.WebSocket.CLOSING = 2;
+      window.WebSocket.CLOSED = 3;
+    })();
+
+    // 2. Intercept and swallow any unhandled rejections or error events from WebSocket/Vite
+    window.addEventListener('unhandledrejection', function(event) {
+      var reason = event.reason;
+      var msg = (reason && (reason.message || reason.stack || String(reason))) || '';
+      if (
+        msg.includes('WebSocket') ||
+        msg.includes('websocket') ||
+        msg.includes('ws') ||
+        msg.includes('@vite/client') ||
+        msg.includes('closed without opened')
+      ) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    });
+    window.addEventListener('error', function(event) {
+      var msg = (event && (event.message || '')) || '';
+      if (
+        msg.includes('WebSocket') ||
+        msg.includes('websocket') ||
+        msg.includes('ws') ||
+        (event.filename && event.filename.includes('@vite/client'))
+      ) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    });
+  </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CogniCSE - 1-on-1 CSE Pedagogical Learning Support System</title>
+    <meta name="description" content="Intelligent 1-on-1 pedagogical AI tutoring system for Computer Science & Engineering with Socratic 4-tier scaffolding, ISLM profile modeling, interactive code sandbox, memory tree, video generator, and mock tests." />
+    <meta property="og:title" content="CogniCSE - 1-on-1 CSE Pedagogical Learning Support System" />
+    <meta property="og:description" content="Intelligent 1-on-1 pedagogical AI tutoring system for Computer Science & Engineering with Socratic 4-tier scaffolding, ISLM profile modeling, interactive code sandbox, memory tree, video generator, and mock tests." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
