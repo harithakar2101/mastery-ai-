@@ -20,6 +20,7 @@ import { WebDevLab } from './components/WebDevLab/WebDevLab';
 import { EngagementPanel } from './components/Engagement/EngagementPanel';
 import { LiveClassView } from './components/LiveClass/LiveClassView';
 import { RetainView } from './components/Retain/RetainView';
+import { StudyStudioView } from './components/StudyStudio/StudyStudioView';
 import { WorkflowErrorBoundary } from './components/Common/WorkflowErrorBoundary';
 import { RotateCcw, Menu } from 'lucide-react';
 
@@ -226,6 +227,13 @@ const MainApplication: React.FC = () => {
           <div className="p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto w-full">
             <WorkflowErrorBoundary workflowName="Sensors & Engagement Simulator">
               <EngagementPanel />
+            </WorkflowErrorBoundary>
+          </div>
+        )}
+        {currentWorkflow === 'STUDY_STUDIO' && (
+          <div className="p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto w-full">
+            <WorkflowErrorBoundary workflowName="Study Studio Workspace">
+              <StudyStudioView />
             </WorkflowErrorBoundary>
           </div>
         )}

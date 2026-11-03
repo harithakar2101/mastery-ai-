@@ -29,7 +29,8 @@ export type AppWorkflow =
   | 'STUDENT_DASHBOARD'
   | 'TEACHER_DASHBOARD'
   | 'ENGAGEMENT'
-  | 'LIVE_CLASS';
+  | 'LIVE_CLASS'
+  | 'STUDY_STUDIO';
 
 export interface TutorContextType {
   isAuthenticated: boolean;

@@ -10,7 +10,20 @@ import {
 } from './auth.ts';
 import { authenticate } from './authMiddleware.ts';
 import { validateBody, registerSchema, loginSchema, changePasswordSchema } from './validation.ts';
-import { readStore, writeStoreAtomically, getDemoStore, type StoreUser, type UserRole } from './store.ts';
+import {
+  userRepository,
+  islmRepository,
+  dkmStateRepository,
+  eventRepository,
+  attemptRepository,
+  interventionRepository,
+  sessionRepository,
+  flashcardRepository,
+  studyPlanRepository,
+  portfolioRepository,
+  type StoreUser,
+  type UserRole,
+} from './repositories/index.ts';
 
 export const authRouter = Router();
 
@@ -25,8 +38,7 @@ authRouter.post('/register', validateBody(registerSchema), async (req: Request, 
     const { email, password, name, degree, inviteCode } = req.body;
     const normEmail = email.toLowerCase().trim();
 
-    const store = readStore();
-    const existing = store.users.find(u => u.email.toLowerCase() === normEmail);
+    const existing = userRepository.findByEmail(normEmail);
     if (existing) {
       return sendError(res, 409, 'EMAIL_EXISTS', 'An account with this email address already exists.', req);
     }
@@ -42,7 +54,7 @@ authRouter.post('/register', validateBody(registerSchema), async (req: Request, 
     const passwordHash = await hashPassword(password);
     const now = new Date().toISOString();
 
-    const newUser: StoreUser = {
+    const newUser = userRepository.create({
       id: userId,
       name,
       email: normEmail,
@@ -58,9 +70,9 @@ authRouter.post('/register', validateBody(registerSchema), async (req: Request, 
       tokenVersion: 1,
       createdAt: now,
       updatedAt: now,
-    };
+    });
 
-    const newIslm = {
+    const newIslm = islmRepository.upsert({
       student_id: userId,
       name,
       email: normEmail,
@@ -72,14 +84,9 @@ authRouter.post('/register', validateBody(registerSchema), async (req: Request, 
       scaffolding_tier_required: 1,
       error_count: 0,
       independent_solves: 0,
-      scaffolding_fading_index: 0.2,
+      scaffolding_fading_index: 0.20,
       time_spent_mins: 0,
       history: [],
-    };
-
-    await writeStoreAtomically(s => {
-      s.users.push(newUser);
-      s.islm.push(newIslm);
     });
 
     const token = createSessionToken(newUser);
@@ -104,23 +111,7 @@ authRouter.post('/login', validateBody(loginSchema), async (req: Request, res: R
     const { email, password } = req.body;
     const normEmail = email.toLowerCase().trim();
 
-    const store = readStore();
-    let user = store.users.find(u => u.email.toLowerCase() === normEmail);
-
-    // If not found in current store, check demo accounts template
-    if (!user) {
-      const demoUser = getDemoStore().users.find(u => u.email.toLowerCase() === normEmail);
-      if (demoUser) {
-        await writeStoreAtomically(s => {
-          s.users.push(demoUser);
-          const demoIslm = getDemoStore().islm.find(i => i.student_id === demoUser.id);
-          if (demoIslm && !s.islm.some(i => i.student_id === demoUser.id)) {
-            s.islm.push(demoIslm);
-          }
-        });
-        user = demoUser;
-      }
-    }
+    const user = userRepository.findByEmail(normEmail);
 
     if (!user || !user.passwordHash) {
       return sendError(res, 401, 'INVALID_CREDENTIALS', 'Invalid email or password.', req);
@@ -131,10 +122,9 @@ authRouter.post('/login', validateBody(loginSchema), async (req: Request, res: R
       return sendError(res, 401, 'INVALID_CREDENTIALS', 'Invalid email or password.', req);
     }
 
-    const updatedStore = readStore();
-    const islm = updatedStore.islm.find(i => i.student_id === user!.id);
-    const sessions = (updatedStore.sessions || []).filter(s => s.studentId === user!.id);
-    const dkmNodes = updatedStore.dkmStates?.[user!.id] || null;
+    const islm = islmRepository.findByStudentId(user.id);
+    const sessionsResult = sessionRepository.findByStudentPaginated(user.id, { limit: 20 });
+    const dkmNodes = dkmStateRepository.findByStudentId(user.id);
 
     const token = createSessionToken(user);
     setSessionCookie(res, token);
@@ -143,7 +133,7 @@ authRouter.post('/login', validateBody(loginSchema), async (req: Request, res: R
       success: true,
       user: sanitizeUser(user),
       islm: islm || null,
-      sessions,
+      sessions: sessionsResult.items,
       dkmNodes,
       token,
     });
@@ -161,8 +151,7 @@ authRouter.post('/logout', (_req: Request, res: Response) => {
 // 4. Token Refresh / Rotation
 authRouter.post('/refresh', authenticate, (req: Request, res: Response) => {
   try {
-    const store = readStore();
-    const user = store.users.find(u => u.id === req.user!.id);
+    const user = userRepository.findById(req.user!.id);
     if (!user) {
       return sendError(res, 404, 'NOT_FOUND', 'User not found', req);
     }
@@ -183,13 +172,7 @@ authRouter.post('/refresh', authenticate, (req: Request, res: Response) => {
 authRouter.post('/signout-all', authenticate, async (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
-    await writeStoreAtomically(store => {
-      const u = store.users.find(x => x.id === userId);
-      if (u) {
-        u.tokenVersion = (u.tokenVersion || 1) + 1;
-      }
-    });
-
+    userRepository.incrementTokenVersion(userId);
     clearSessionCookie(res);
     return res.json({
       success: true,
@@ -202,20 +185,19 @@ authRouter.post('/signout-all', authenticate, async (req: Request, res: Response
 
 // 6. Get Current Authenticated Profile
 authRouter.get('/me', authenticate, (req: Request, res: Response) => {
-  const store = readStore();
-  const user = store.users.find(u => u.id === req.user!.id);
+  const user = userRepository.findById(req.user!.id);
   if (!user) {
     return sendError(res, 404, 'NOT_FOUND', 'User profile not found', req);
   }
 
-  const islm = store.islm.find(i => i.student_id === req.user!.id);
-  const sessions = (store.sessions || []).filter(s => s.studentId === req.user!.id);
-  const dkmNodes = store.dkmStates?.[req.user!.id] || null;
+  const islm = islmRepository.findByStudentId(req.user!.id);
+  const sessions = sessionRepository.findByStudentPaginated(req.user!.id, { limit: 20 });
+  const dkmNodes = dkmStateRepository.findByStudentId(req.user!.id);
 
   return res.json({
     user: sanitizeUser(user),
     islm: islm || null,
-    sessions,
+    sessions: sessions.items,
     dkmNodes,
   });
 });
@@ -226,8 +208,7 @@ authRouter.post('/change-password', authenticate, validateBody(changePasswordSch
     const { currentPassword, newPassword } = req.body;
     const userId = req.user!.id;
 
-    const store = readStore();
-    const user = store.users.find(u => u.id === userId);
+    const user = userRepository.findById(userId);
 
     if (!user || !user.passwordHash) {
       return sendError(res, 404, 'NOT_FOUND', 'User not found', req);
@@ -240,17 +221,11 @@ authRouter.post('/change-password', authenticate, validateBody(changePasswordSch
 
     const newHash = await hashPassword(newPassword);
 
-    await writeStoreAtomically(s => {
-      const u = s.users.find(x => x.id === userId);
-      if (u) {
-        u.passwordHash = newHash;
-        u.tokenVersion = (u.tokenVersion || 1) + 1;
-        u.updatedAt = new Date().toISOString();
-      }
-    });
+    userRepository.update(userId, { passwordHash: newHash });
+    const newTokenVersion = userRepository.incrementTokenVersion(userId);
 
     // Re-issue cookie with updated tokenVersion
-    const updatedUser = { ...user, tokenVersion: (user.tokenVersion || 1) + 1 };
+    const updatedUser = { ...user, tokenVersion: newTokenVersion };
     const token = createSessionToken(updatedUser);
     setSessionCookie(res, token);
 
@@ -265,17 +240,16 @@ authRouter.post('/delete-account', authenticate, async (req: Request, res: Respo
   try {
     const userId = req.user!.id;
 
-    await writeStoreAtomically(store => {
-      store.users = store.users.filter(u => u.id !== userId);
-      store.islm = store.islm.filter(i => i.student_id !== userId);
-      store.events = (store.events || []).filter(e => e.studentId !== userId);
-      store.attempts = (store.attempts || []).filter(a => a.studentId !== userId);
-      store.sessions = (store.sessions || []).filter(s => s.studentId !== userId);
-      store.interventions = (store.interventions || []).filter(i => i.studentId !== userId);
-      if (store.dkmStates) {
-        delete store.dkmStates[userId];
-      }
-    });
+    userRepository.delete(userId);
+    islmRepository.deleteByStudentId(userId);
+    dkmStateRepository.deleteByStudentId(userId);
+    eventRepository.deleteByStudentId(userId);
+    attemptRepository.deleteByStudentId(userId);
+    interventionRepository.deleteByStudentId(userId);
+    sessionRepository.deleteByStudentId(userId);
+    flashcardRepository.deleteByStudentId(userId);
+    studyPlanRepository.deleteByStudentId(userId);
+    portfolioRepository.deleteByStudentId(userId);
 
     clearSessionCookie(res);
     return res.json({
@@ -291,15 +265,17 @@ authRouter.post('/delete-account', authenticate, async (req: Request, res: Respo
 authRouter.get('/export-data', authenticate, (req: Request, res: Response) => {
   try {
     const userId = req.user!.id;
-    const store = readStore();
 
-    const user = store.users.find(u => u.id === userId);
-    const islm = store.islm.find(i => i.student_id === userId);
-    const events = (store.events || []).filter(e => e.studentId === userId);
-    const attempts = (store.attempts || []).filter(a => a.studentId === userId);
-    const sessions = (store.sessions || []).filter(s => s.studentId === userId);
-    const interventions = (store.interventions || []).filter(i => i.studentId === userId);
-    const dkm = store.dkmStates?.[userId] || null;
+    const user = userRepository.findById(userId);
+    const islm = islmRepository.findByStudentId(userId);
+    const events = eventRepository.listByStudentPaginated(userId, { limit: 1000 }).items;
+    const attempts = attemptRepository.listByStudentPaginated(userId, { limit: 1000 }).items;
+    const sessions = sessionRepository.findByStudentPaginated(userId, { limit: 100 }).items;
+    const interventions = interventionRepository.listByStudentPaginated(userId, { limit: 100 }).items;
+    const dkm = dkmStateRepository.findByStudentId(userId);
+    const flashcards = flashcardRepository.findByStudentPaginated(userId, { limit: 100 }).items;
+    const studyPlans = studyPlanRepository.findByStudentPaginated(userId, { limit: 50 }).items;
+    const portfolio = portfolioRepository.findByStudentPaginated(userId, { limit: 50 }).items;
 
     const exportPayload = {
       exportedAt: new Date().toISOString(),
@@ -310,6 +286,9 @@ authRouter.get('/export-data', authenticate, (req: Request, res: Response) => {
       attempts,
       sessions,
       interventions,
+      flashcards,
+      studyPlans,
+      portfolio,
     };
 
     res.setHeader('Content-Type', 'application/json');

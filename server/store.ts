@@ -1,5 +1,15 @@
 import fs from 'fs';
 import path from 'path';
+import {
+  userRepository,
+  islmRepository,
+  eventRepository,
+  attemptRepository,
+  interventionRepository,
+  studyRepository,
+  cohortRepository,
+} from './repositories/index.ts';
+import { runMigrations } from './db/migrations.ts';
 
 export interface PedagogicalEvent {
   id: string;
@@ -391,70 +401,72 @@ function getInitialStore(): StoreData {
 
 export async function seedDemoStore(): Promise<StoreData> {
   const demo = getDemoStore();
-  return await writeStoreAtomically(store => {
-    store.users = demo.users;
-    store.islm = demo.islm;
-    store.events = demo.events;
-    store.attempts = demo.attempts;
-    store.interventions = demo.interventions;
-    store.sessions = demo.sessions;
-    store.cohorts = demo.cohorts;
-    store.studies = demo.studies;
-    store.dkmStates = demo.dkmStates || {};
-  });
+  runMigrations();
+  for (const u of demo.users) {
+    userRepository.upsert(u);
+  }
+  for (const i of demo.islm) {
+    islmRepository.upsert(i);
+  }
+  for (const c of demo.cohorts) {
+    cohortRepository.upsert(c);
+  }
+  for (const s of demo.studies || []) {
+    if (!studyRepository.findById(s.id)) {
+      studyRepository.create(s);
+    }
+  }
+  return readStore();
 }
 
 let writeQueue: Promise<void> = Promise.resolve();
 
 export function ensureStoreExists(): StoreData {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-
-  if (!fs.existsSync(STORE_FILE)) {
-    const initial = getInitialStore();
-    fs.writeFileSync(STORE_TMP_FILE, JSON.stringify(initial, null, 2), 'utf-8');
-    fs.renameSync(STORE_TMP_FILE, STORE_FILE);
-    return initial;
-  }
-
-  try {
-    const raw = fs.readFileSync(STORE_FILE, 'utf-8');
-    return JSON.parse(raw) as StoreData;
-  } catch (err) {
-    console.warn('Corrupt store.json found, rebuilding from initial template:', err);
-    const initial = getInitialStore();
-    fs.writeFileSync(STORE_TMP_FILE, JSON.stringify(initial, null, 2), 'utf-8');
-    fs.renameSync(STORE_TMP_FILE, STORE_FILE);
-    return initial;
-  }
+  return readStore();
 }
 
 export async function writeStoreAtomically(mutator: (store: StoreData) => void): Promise<StoreData> {
-  let resolvedStore: StoreData = ensureStoreExists();
-  const nextTask = writeQueue.then(async () => {
-    const store = ensureStoreExists();
-    mutator(store);
+  const store = readStore();
+  mutator(store);
 
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
+  for (const u of store.users) {
+    userRepository.upsert(u);
+  }
+  for (const i of store.islm) {
+    islmRepository.upsert(i);
+  }
+  for (const c of store.cohorts || []) {
+    cohortRepository.upsert(c);
+  }
 
-    await fs.promises.writeFile(STORE_TMP_FILE, JSON.stringify(store, null, 2), 'utf-8');
-    await fs.promises.rename(STORE_TMP_FILE, STORE_FILE);
-    resolvedStore = store;
-  });
-
-  writeQueue = nextTask.catch(err => {
-    console.error('Error in writeStoreAtomically queue:', err);
-  });
-
-  await nextTask;
-  return resolvedStore;
+  return store;
 }
 
 export function readStore(): StoreData {
-  return ensureStoreExists();
+  try {
+    runMigrations();
+    const users = userRepository.listPaginated({ limit: 1000 }).items;
+    const islm = islmRepository.listPaginated({ limit: 1000 }).items as any;
+    const events = eventRepository.listAllPaginated({ limit: 10000 }).items as any;
+    const attempts = attemptRepository.listAll() as any;
+    const interventions = interventionRepository.listAllPaginated({ limit: 1000 }).items as any;
+    const cohorts = cohortRepository.findAll();
+    const studies = studyRepository.findAll();
+
+    return {
+      users,
+      islm,
+      events,
+      attempts,
+      interventions,
+      sessions: [],
+      cohorts,
+      studies,
+      dkmStates: {},
+    };
+  } catch {
+    return getEmptyStore();
+  }
 }
 
 export async function appendEvent(eventData: Omit<PedagogicalEvent, 'id' | 'ts'> & { id?: string; ts?: string }): Promise<PedagogicalEvent> {

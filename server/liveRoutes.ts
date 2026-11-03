@@ -1,19 +1,9 @@
 import { type Express, type Request, type Response } from 'express';
-import {
-  addSSEClient,
-  removeSSEClient,
-  startLiveSession,
-  endLiveSession,
-  getLiveSessionState,
-  setLiveTimeline,
-  releaseLiveQuestion,
-  submitLiveAnswer,
-  updateStudentEngagement,
-} from './liveSession.ts';
+import { liveSessionService } from './services/LiveSessionService.ts';
 import { processLiveTranscriptRequest } from './gemini.ts';
 import { authenticate, requireRole } from './authMiddleware.ts';
 import { verifySessionToken, COOKIE_NAME, sendError } from './auth.ts';
-import { readStore } from './store.ts';
+import { userRepository } from './repositories/index.ts';
 import {
   validateBody,
   liveSessionStartSchema,
@@ -43,8 +33,7 @@ export function registerLiveRoutes(app: Express) {
       return sendError(res, 401, 'UNAUTHORIZED', 'Invalid or expired session token', req);
     }
 
-    const store = readStore();
-    const user = store.users.find(u => u.id === verification.payload!.userId);
+    const user = userRepository.findById(verification.payload!.userId);
     if (!user) {
       return sendError(res, 401, 'UNAUTHORIZED', 'User not found', req);
     }
@@ -53,6 +42,10 @@ export function registerLiveRoutes(app: Express) {
     const role = user.role;
     const studentId = user.id;
     const studentName = user.name;
+
+    // Check for Last-Event-ID header (or query param) for reconnection replay
+    const rawLastId = req.headers['last-event-id'] || req.query.lastEventId || req.query['last-event-id'];
+    const lastEventId = rawLastId !== undefined && rawLastId !== null ? parseInt(String(rawLastId), 10) : undefined;
 
     res.writeHead(200, {
       'Content-Type': 'text/event-stream',
@@ -66,26 +59,19 @@ export function registerLiveRoutes(app: Express) {
     }
 
     const clientId = `client_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    addSSEClient({
-      id: clientId,
-      role: role === 'admin' ? 'teacher' : role,
-      studentId,
-      studentName,
-      res,
-    });
-
-    // 15-second heartbeat ping to keep connection alive
-    const pingInterval = setInterval(() => {
-      try {
-        res.write(': ping\n\n');
-      } catch {
-        clearInterval(pingInterval);
-      }
-    }, 15000);
+    liveSessionService.addClient(
+      {
+        id: clientId,
+        role: role === 'admin' ? 'teacher' : (role as 'teacher' | 'student'),
+        studentId,
+        studentName,
+        res,
+      },
+      !isNaN(Number(lastEventId)) ? Number(lastEventId) : undefined
+    );
 
     req.on('close', () => {
-      clearInterval(pingInterval);
-      removeSSEClient(clientId);
+      liveSessionService.removeClient(clientId);
     });
   });
 
@@ -98,7 +84,7 @@ export function registerLiveRoutes(app: Express) {
     (req: Request, res: Response) => {
       try {
         const { topicId, topicName, track } = req.body;
-        const session = startLiveSession({
+        const session = liveSessionService.startSession({
           topicId: topicId || 'web_apache_docroot',
           topicName: topicName || 'Apache DocumentRoot & File Hierarchy',
           track: track || 'Web Application Development',
@@ -114,7 +100,7 @@ export function registerLiveRoutes(app: Express) {
   // POST /api/live/session/end (teacher/admin only)
   app.post('/api/live/session/end', authenticate, requireRole('teacher', 'admin'), (req: Request, res: Response) => {
     try {
-      const result = endLiveSession();
+      const result = liveSessionService.endSession();
       return res.json(result);
     } catch (err: any) {
       return sendError(res, 500, 'LIVE_END_ERROR', err?.message || 'Failed to end live session', req);
@@ -124,7 +110,7 @@ export function registerLiveRoutes(app: Express) {
   // GET /api/live/session/state (authenticated)
   app.get('/api/live/session/state', authenticate, (req: Request, res: Response) => {
     try {
-      const state = getLiveSessionState();
+      const state = liveSessionService.getState();
       return res.json(state);
     } catch (err: any) {
       return sendError(res, 500, 'LIVE_STATE_ERROR', err?.message || 'Failed to get live session state', req);
@@ -142,7 +128,7 @@ export function registerLiveRoutes(app: Express) {
         const { transcript, track, topicId } = req.body;
         const result = await processLiveTranscriptRequest(transcript, track, topicId);
         if (result.timeline && Array.isArray(result.timeline)) {
-          setLiveTimeline(result.timeline);
+          liveSessionService.setTimeline(result.timeline);
         }
 
         return res.json({
@@ -166,7 +152,7 @@ export function registerLiveRoutes(app: Express) {
     (req: Request, res: Response) => {
       try {
         const { questionId } = req.body;
-        const releasedQuestion = releaseLiveQuestion(questionId);
+        const releasedQuestion = liveSessionService.releaseQuestion(questionId);
         if (!releasedQuestion) {
           return sendError(res, 404, 'NOT_FOUND', `Question ${questionId} not found in session timeline`, req);
         }
@@ -188,7 +174,7 @@ export function registerLiveRoutes(app: Express) {
         const { questionId, selectedIndex, lowEngagement } = req.body;
         const studentId = req.user!.id; // Strictly from session token
 
-        const result = await submitLiveAnswer({
+        const result = await liveSessionService.submitAnswer({
           studentId,
           questionId,
           selectedIndex: Number(selectedIndex),
@@ -212,7 +198,7 @@ export function registerLiveRoutes(app: Express) {
         const { lowEngagement } = req.body;
         const studentId = req.user!.id; // Strictly from session token
 
-        updateStudentEngagement(studentId, Boolean(lowEngagement));
+        liveSessionService.updateEngagement(studentId, Boolean(lowEngagement));
         return res.json({ success: true });
       } catch (err: any) {
         return sendError(res, 500, 'ENGAGEMENT_ERROR', err?.message || 'Failed to update engagement', req);

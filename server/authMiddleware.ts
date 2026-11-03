@@ -1,6 +1,6 @@
 import { type Request, type Response, type NextFunction } from 'express';
 import { verifySessionToken, COOKIE_NAME, sendError, type AuthUser } from './auth.ts';
-import { readStore, type UserRole } from './store.ts';
+import { userRepository, type UserRole } from './repositories/index.ts';
 
 export function requestIdMiddleware(req: Request, res: Response, next: NextFunction) {
   const existing = req.headers['x-request-id'] as string;
@@ -36,8 +36,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
     return sendError(res, 401, 'UNAUTHORIZED', `Invalid session token: ${result.reason || 'verification failed'}`, req);
   }
 
-  const store = readStore();
-  const user = store.users.find(u => u.id === result.payload!.userId);
+  const user = userRepository.findById(result.payload!.userId);
 
   if (!user) {
     return sendError(res, 401, 'UNAUTHORIZED', 'User associated with session not found', req);
@@ -89,8 +88,7 @@ export function optionalAuth(req: Request, _res: Response, next: NextFunction) {
   const result = verifySessionToken(token);
   if (!result.valid || !result.payload) return next();
 
-  const store = readStore();
-  const user = store.users.find(u => u.id === result.payload!.userId);
+  const user = userRepository.findById(result.payload!.userId);
   if (!user) return next();
 
   const currentTokenVersion = user.tokenVersion || 1;

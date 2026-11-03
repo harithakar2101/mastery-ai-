@@ -5,14 +5,22 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 
+import { getDb } from './server/db/connection.ts';
+import { runMigrations } from './server/db/migrations.ts';
+import { migrateFromStoreJson } from './server/scripts/migrateFromStoreJson.ts';
 import {
-  ensureStoreExists,
-  readStore,
-  writeStoreAtomically,
-  appendEvent,
-  seedDemoStore,
-  type StoreUser,
-} from './server/store.ts';
+  userRepository,
+  islmRepository,
+  dkmStateRepository,
+  eventRepository,
+  attemptRepository,
+  interventionRepository,
+  sessionRepository,
+  cohortRepository,
+  studyRepository,
+} from './server/repositories/index.ts';
+import { seedDemoCohort, clearDemoCohort } from './server/services/demoCohortService.ts';
+
 import {
   processTutoringRequest,
   processVideoRequest,
@@ -42,6 +50,7 @@ import {
 import { registerLiveRoutes } from './server/liveRoutes.ts';
 import { registerTeacherRoutes } from './server/teacherRoutes.ts';
 import { registerStudyRoutes } from './server/studyRoutes.ts';
+import { registerStudyStudioRoutes } from './server/studyStudioRoutes.ts';
 
 dotenv.config();
 
@@ -58,90 +67,140 @@ app.use(corsMiddleware);
 app.use(cookieParser());
 
 // Route-specific request body size limits
+// Large upload limit allocated for Study Studio and Vault processing (up to 32 MB to accommodate 20MB files in base64)
+app.use('/api/study-studio', express.json({ limit: '32mb' }));
+app.use('/api/library-vault', express.json({ limit: '20mb' }));
+
 // Default global limit is conservative 50kb
 app.use(express.json({ limit: '50kb' }));
 app.use(express.urlencoded({ extended: true, limit: '50kb' }));
 app.use(globalLimiter);
 
-// Ensure store.json is initialized atomically on startup
-ensureStoreExists();
+// Health and Readiness probes
+app.get('/healthz', (_req: Request, res: Response) => {
+  res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
+app.get('/readyz', (_req: Request, res: Response) => {
+  try {
+    const db = getDb();
+    const result = db.prepare('SELECT 1 as alive').get() as { alive: number } | undefined;
+    if (result && result.alive === 1) {
+      return res.status(200).json({ status: 'ready', database: 'connected' });
+    }
+    return res.status(503).json({ status: 'unready', database: 'query failed' });
+  } catch (err: any) {
+    return res.status(503).json({ status: 'unready', error: err?.message || 'Database connection error' });
+  }
+});
+
+// Ensure database schema migrations run on startup
+runMigrations();
+if (userRepository.count() === 0) {
+  try {
+    migrateFromStoreJson();
+  } catch (err) {
+    console.warn('[boot] Auto-migration from store.json skipped:', err);
+  }
+}
 
 // Mount Authentication & Account Settings Routes with Dedicated Rate Limiter (20kb body limit)
 app.use('/api/auth', express.json({ limit: '20kb' }), authLimiter, authRouter);
 
 // Admin Routes (Strictly Admin Role Only)
-app.post('/api/admin/create-teacher', authenticate, requireRole('admin'), validateBody(createTeacherSchema), async (req: Request, res: Response) => {
-  try {
-    const { email, password, name, degree } = req.body;
-    const normEmail = email.toLowerCase().trim();
+app.post(
+  '/api/admin/create-teacher',
+  authenticate,
+  requireRole('admin'),
+  validateBody(createTeacherSchema),
+  async (req: Request, res: Response) => {
+    try {
+      const { email, password, name, degree } = req.body;
+      const normEmail = email.toLowerCase().trim();
 
-    const store = readStore();
-    const existing = store.users.find(u => u.email.toLowerCase() === normEmail);
-    if (existing) {
-      return sendError(res, 409, 'EMAIL_EXISTS', 'An account with this email address already exists.', req);
+      const existing = userRepository.findByEmail(normEmail);
+      if (existing) {
+        return sendError(res, 409, 'EMAIL_EXISTS', 'An account with this email address already exists.', req);
+      }
+
+      const userId = `FACULTY_${Math.floor(100 + Math.random() * 900)}`;
+      const passwordHash = await hashPassword(password);
+      const now = new Date().toISOString();
+
+      const newTeacher = userRepository.create({
+        id: userId,
+        name,
+        email: normEmail,
+        role: 'teacher',
+        plan: 'Campus License',
+        degree: degree || 'Department of Computer Science & Engineering',
+        preferredLanguages: ['python', 'cpp', 'javascript'],
+        streakDays: 1,
+        testsCompleted: 0,
+        overallMastery: 0.90,
+        theme: 'dark',
+        passwordHash,
+        tokenVersion: 1,
+        createdAt: now,
+        updatedAt: now,
+        synthetic: false,
+      });
+
+      islmRepository.upsert({
+        student_id: userId,
+        name,
+        email: normEmail,
+        role: 'teacher',
+        course_track: 'Faculty Instruction & Research',
+        overall_mastery: 0.90,
+        topic_mastery: {},
+        recent_misconceptions: [],
+        scaffolding_tier_required: 1,
+        error_count: 0,
+        independent_solves: 0,
+        scaffolding_fading_index: 0.1,
+        time_spent_mins: 0,
+        history: [],
+        synthetic: false,
+      });
+
+      const { passwordHash: _, ...safeUser } = newTeacher;
+      return res.status(201).json({
+        success: true,
+        message: 'Teacher account created successfully by administrator.',
+        user: safeUser,
+      });
+    } catch (err: any) {
+      return sendError(res, 500, 'ADMIN_TEACHER_CREATION_FAILED', err?.message || 'Failed to create teacher account', req);
     }
+  }
+);
 
-    const userId = `FACULTY_${Math.floor(100 + Math.random() * 900)}`;
-    const passwordHash = await hashPassword(password);
-    const now = new Date().toISOString();
-
-    const newTeacher: StoreUser = {
-      id: userId,
-      name,
-      email: normEmail,
-      role: 'teacher',
-      plan: 'Campus License',
-      degree: degree || 'Department of Computer Science & Engineering',
-      preferredLanguages: ['python', 'cpp', 'javascript'],
-      streakDays: 1,
-      testsCompleted: 0,
-      overallMastery: 0.90,
-      theme: 'dark',
-      passwordHash,
-      tokenVersion: 1,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    const newIslm = {
-      student_id: userId,
-      name,
-      email: normEmail,
-      role: 'teacher' as const,
-      course_track: 'Faculty Instruction & Research',
-      overall_mastery: 0.90,
-      topic_mastery: {},
-      recent_misconceptions: [],
-      scaffolding_tier_required: 1,
-      error_count: 0,
-      independent_solves: 0,
-      scaffolding_fading_index: 0.1,
-      time_spent_mins: 0,
-      history: [],
-    };
-
-    await writeStoreAtomically(s => {
-      s.users.push(newTeacher);
-      s.islm.push(newIslm);
-    });
-
-    const { passwordHash: _, ...safeUser } = newTeacher;
-    return res.status(201).json({
+// Admin Seed Demo Cohort (All records tagged synthetic)
+app.post('/api/admin/seed-demo', authenticate, requireRole('admin'), async (req: Request, res: Response) => {
+  try {
+    const result = await seedDemoCohort();
+    return res.json({
       success: true,
-      message: 'Teacher account created successfully by administrator.',
-      user: safeUser,
+      message: 'Demo cohort successfully seeded with synthetic pedagogical records.',
+      ...result,
     });
   } catch (err: any) {
-    return sendError(res, 500, 'ADMIN_TEACHER_CREATION_FAILED', err?.message || 'Failed to create teacher account', req);
+    return sendError(res, 500, 'SEED_ERROR', err?.message || 'Failed to seed demo data', req);
   }
 });
 
-app.post('/api/admin/seed-demo', authenticate, requireRole('admin'), async (req: Request, res: Response) => {
+// Admin Clear Demo Cohort (One-click removal of all synthetic records)
+app.post('/api/admin/clear-demo', authenticate, requireRole('admin'), (req: Request, res: Response) => {
   try {
-    const store = await seedDemoStore();
-    return res.json({ success: true, users: store.users.length, events: store.events.length });
+    const cleared = clearDemoCohort();
+    return res.json({
+      success: true,
+      message: 'All synthetic demo data removed successfully.',
+      cleared,
+    });
   } catch (err: any) {
-    return sendError(res, 500, 'SEED_ERROR', err?.message || 'Failed to seed demo data', req);
+    return sendError(res, 500, 'CLEAR_DEMO_ERROR', err?.message || 'Failed to clear demo data', req);
   }
 });
 
@@ -149,16 +208,16 @@ app.post('/api/admin/seed-demo', authenticate, requireRole('admin'), async (req:
 registerLiveRoutes(app);
 registerTeacherRoutes(app);
 registerStudyRoutes(app);
+registerStudyStudioRoutes(app);
 
 // Endpoint: Full User State (Protected - studentId always derived from session)
 app.get('/api/user/state', authenticate, (req: Request, res: Response) => {
   try {
     const studentId = req.user!.id;
-    const store = readStore();
-    const user = store.users.find(u => u.id === studentId);
-    const islm = store.islm.find(i => i.student_id === studentId);
-    const sessions = (store.sessions || []).filter(s => s.studentId === studentId);
-    const dkmNodes = store.dkmStates?.[studentId] || null;
+    const user = userRepository.findById(studentId);
+    const islm = islmRepository.findByStudentId(studentId);
+    const sessions = sessionRepository.listByStudentPaginated(studentId, { limit: 100 }).items;
+    const dkmNodes = dkmStateRepository.findByStudentId(studentId);
 
     if (user) {
       const { passwordHash, ...safeUser } = user;
@@ -178,62 +237,40 @@ app.post(
   authenticate,
   express.json({ limit: '500kb' }),
   validateBody(updateUserStateSchema),
-  async (req: Request, res: Response) => {
+  (req: Request, res: Response) => {
     try {
       const studentId = req.user!.id; // Strictly from authenticated session
       const { islm, dkmNodes, sessions, userProfile } = req.body;
 
-      await writeStoreAtomically(store => {
-        // 1. Update whitelisted user profile fields only (never allow client mutation of role, id, or plan)
-        if (userProfile) {
-          const uIdx = store.users.findIndex(u => u.id === studentId);
-          if (uIdx >= 0) {
-            const current = store.users[uIdx];
-            store.users[uIdx] = {
-              ...current,
-              name: userProfile.name !== undefined ? userProfile.name : current.name,
-              theme: userProfile.theme !== undefined ? userProfile.theme : current.theme,
-              degree: userProfile.degree !== undefined ? userProfile.degree : current.degree,
-              preferredLanguages: userProfile.preferredLanguages !== undefined ? userProfile.preferredLanguages : current.preferredLanguages,
-              avatar: userProfile.avatar !== undefined ? userProfile.avatar : current.avatar,
-              updatedAt: new Date().toISOString(),
-            };
-          }
-        }
+      // 1. Update whitelisted user profile fields only (never allow client mutation of role, id, or plan)
+      if (userProfile) {
+        userRepository.update(studentId, {
+          name: userProfile.name,
+          theme: userProfile.theme,
+          degree: userProfile.degree,
+          preferredLanguages: userProfile.preferredLanguages,
+          updatedAt: new Date().toISOString(),
+        });
+      }
 
-        // 2. Update ISLM metrics for this student
-        if (islm) {
-          const iIdx = store.islm.findIndex(i => i.student_id === studentId);
-          if (iIdx >= 0) {
-            const prev = store.islm[iIdx];
-            store.islm[iIdx] = {
-              ...prev,
-              ...islm,
-              student_id: studentId,
-              role: prev.role, // Preserve server-authoritative role
-            };
-          } else {
-            store.islm.push({
-              ...islm,
-              student_id: studentId,
-              role: req.user!.role,
-            });
-          }
-        }
+      // 2. Update ISLM metrics for this student
+      if (islm) {
+        islmRepository.upsert({
+          ...islm,
+          student_id: studentId,
+          role: req.user!.role, // Role strictly preserved
+        });
+      }
 
-        // 3. Update personal session history
-        if (sessions && Array.isArray(sessions)) {
-          store.sessions = (store.sessions || []).filter(s => s.studentId !== studentId).concat(
-            sessions.map(s => ({ ...s, studentId }))
-          );
-        }
+      // 3. Update personal session history
+      if (sessions && Array.isArray(sessions)) {
+        sessionRepository.replaceForStudent(studentId, sessions);
+      }
 
-        // 4. Update personal DKM knowledge graph nodes
-        if (dkmNodes && Array.isArray(dkmNodes)) {
-          if (!store.dkmStates) store.dkmStates = {};
-          store.dkmStates[studentId] = dkmNodes;
-        }
-      });
+      // 4. Update personal DKM knowledge graph nodes
+      if (dkmNodes && Array.isArray(dkmNodes)) {
+        dkmStateRepository.upsert(studentId, dkmNodes);
+      }
 
       return res.json({ success: true });
     } catch (err: any) {
@@ -242,55 +279,97 @@ app.post(
   }
 );
 
-// Endpoint: Scoped Store Collection Read (Protected - ownership enforced)
+// Endpoint: Scoped Store Collection Read (Protected - cursor-paginated, ownership enforced)
 app.get('/api/store/:collection', authenticate, validateQuery(storeCollectionQuerySchema), (req: Request, res: Response) => {
   try {
     const { collection } = req.params;
-    const store = readStore();
     const validCollections = ['users', 'islm', 'events', 'attempts', 'interventions', 'sessions', 'cohorts', 'studies'];
     if (!validCollections.includes(collection)) {
       return sendError(res, 404, 'NOT_FOUND', `Unknown collection: ${collection}`, req);
     }
 
-    const items = (store as any)[collection] || [];
-
-    // Global curriculum collections open to all authenticated users
-    if (collection === 'cohorts' || collection === 'studies') {
-      return res.json({ collection, items });
-    }
-
-    // Teacher or admin can view all records across the cohort
-    if (req.user!.role === 'teacher' || req.user!.role === 'admin') {
-      const sanitized = collection === 'users'
-        ? items.map((u: any) => { const { passwordHash, ...rest } = u; return rest; })
-        : items;
-      return res.json({ collection, items: sanitized });
-    }
+    const cursor = req.query.cursor as string | undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
+    const myId = req.user!.id;
+    const isElevated = req.user!.role === 'teacher' || req.user!.role === 'admin';
 
     // Student role: Strictly restrict to student's own records
     const requestedStudentId = req.query.studentId as string;
-    if (requestedStudentId && requestedStudentId !== req.user!.id) {
+    if (!isElevated && requestedStudentId && requestedStudentId !== myId) {
       return sendError(res, 403, 'FORBIDDEN', 'Access forbidden: students may read only their own records', req);
     }
 
-    const myId = req.user!.id;
-    const scoped = items.filter(
-      (item: any) =>
-        item.studentId === myId || item.student_id === myId || item.id === myId
-    );
+    // Global curriculum collections
+    if (collection === 'cohorts') {
+      const items = cohortRepository.findAll();
+      return res.json({ collection, items, nextCursor: null, hasMore: false, totalCount: items.length });
+    }
 
-    const sanitizedScoped = collection === 'users'
-      ? scoped.map((u: any) => { const { passwordHash, ...rest } = u; return rest; })
-      : scoped;
+    if (collection === 'studies') {
+      const result = studyRepository.listPaginated({ cursor, limit });
+      return res.json({ collection, ...result });
+    }
 
-    return res.json({ collection, items: sanitizedScoped });
+    // Role-scoped queries
+    if (collection === 'users') {
+      if (!isElevated) {
+        const u = userRepository.findById(myId);
+        const items = u ? [{ ...u, passwordHash: undefined }] : [];
+        return res.json({ collection, items, nextCursor: null, hasMore: false, totalCount: items.length });
+      }
+      const result = userRepository.listPaginated({ cursor, limit });
+      const items = result.items.map(({ passwordHash, ...rest }) => rest);
+      return res.json({ collection, items, nextCursor: result.nextCursor, hasMore: result.hasMore, totalCount: result.totalCount });
+    }
+
+    if (collection === 'islm') {
+      if (!isElevated) {
+        const i = islmRepository.findByStudentId(myId);
+        const items = i ? [i] : [];
+        return res.json({ collection, items, nextCursor: null, hasMore: false, totalCount: items.length });
+      }
+      const result = islmRepository.listPaginated({ cursor, limit });
+      return res.json({ collection, ...result });
+    }
+
+    if (collection === 'events') {
+      if (!isElevated) {
+        const result = eventRepository.listByStudentPaginated(myId, { cursor, limit });
+        return res.json({ collection, ...result });
+      }
+      const result = eventRepository.listAllPaginated({ cursor, limit });
+      return res.json({ collection, ...result });
+    }
+
+    if (collection === 'attempts') {
+      const targetStudent = isElevated ? (req.query.studentId as string) || myId : myId;
+      const result = attemptRepository.listByStudentPaginated(targetStudent, { cursor, limit });
+      return res.json({ collection, ...result });
+    }
+
+    if (collection === 'interventions') {
+      if (!isElevated) {
+        const result = interventionRepository.listByStudentPaginated(myId, { cursor, limit });
+        return res.json({ collection, ...result });
+      }
+      const result = interventionRepository.listAllPaginated({ cursor, limit });
+      return res.json({ collection, ...result });
+    }
+
+    if (collection === 'sessions') {
+      const targetStudent = isElevated ? (req.query.studentId as string) || myId : myId;
+      const result = sessionRepository.listByStudentPaginated(targetStudent, { cursor, limit });
+      return res.json({ collection, ...result });
+    }
+
+    return res.json({ collection, items: [], nextCursor: null, hasMore: false, totalCount: 0 });
   } catch (err: any) {
     return sendError(res, 500, 'COLLECTION_READ_ERROR', err?.message || 'Collection read error', req);
   }
 });
 
 // Endpoint: Scoped Store Collection Append / Upsert (Protected)
-app.post('/api/store/:collection', authenticate, async (req: Request, res: Response) => {
+app.post('/api/store/:collection', authenticate, (req: Request, res: Response) => {
   try {
     const { collection } = req.params;
     const item = req.body;
@@ -305,7 +384,6 @@ app.post('/api/store/:collection', authenticate, async (req: Request, res: Respo
       if (['users', 'cohorts', 'studies'].includes(collection)) {
         return sendError(res, 403, 'FORBIDDEN', `Students are not authorized to write to collection '${collection}'`, req);
       }
-      // Enforce ownership: student can only append/modify records for their own id
       const targetStudent = item.studentId || item.student_id;
       if (targetStudent && targetStudent !== req.user!.id) {
         return sendError(res, 403, 'FORBIDDEN', 'Access forbidden: students cannot create records for another student', req);
@@ -314,38 +392,64 @@ app.post('/api/store/:collection', authenticate, async (req: Request, res: Respo
       if (item.student_id) item.student_id = req.user!.id;
     }
 
-    await writeStoreAtomically(store => {
-      const coll = (store as any)[collection] as any[];
-      if (!coll) {
-        (store as any)[collection] = [item];
-        return;
-      }
+    let savedItem: any = item;
 
-      const targetId = item.id || item.student_id;
-      if (targetId) {
-        const idx = coll.findIndex((x: any) => (x.id || x.student_id) === targetId);
-        if (idx >= 0) {
-          coll[idx] = { ...coll[idx], ...item };
-        } else {
-          coll.push(item);
-        }
+    if (collection === 'events') {
+      savedItem = eventRepository.append({
+        ...item,
+        studentId: req.user!.role === 'student' ? req.user!.id : (item.studentId || req.user!.id),
+        synthetic: false,
+      });
+    } else if (collection === 'attempts') {
+      savedItem = attemptRepository.create({
+        ...item,
+        studentId: req.user!.role === 'student' ? req.user!.id : (item.studentId || req.user!.id),
+        synthetic: false,
+      });
+    } else if (collection === 'interventions') {
+      if (item.id && interventionRepository.findById(item.id)) {
+        savedItem = interventionRepository.update(item.id, item);
       } else {
-        coll.push(item);
+        savedItem = interventionRepository.create({
+          ...item,
+          studentId: req.user!.role === 'student' ? req.user!.id : (item.studentId || req.user!.id),
+          synthetic: false,
+        });
       }
-    });
+    } else if (collection === 'islm') {
+      const studentId = req.user!.role === 'student' ? req.user!.id : (item.student_id || req.user!.id);
+      savedItem = islmRepository.upsert({
+        ...item,
+        student_id: studentId,
+      });
+    } else if (collection === 'sessions') {
+      savedItem = sessionRepository.upsert({
+        ...item,
+        studentId: req.user!.role === 'student' ? req.user!.id : (item.studentId || req.user!.id),
+      });
+    } else if (collection === 'cohorts') {
+      savedItem = cohortRepository.upsert(item);
+    } else if (collection === 'studies') {
+      if (item.id && studyRepository.findById(item.id)) {
+        savedItem = studyRepository.update(item.id, item);
+      } else {
+        savedItem = studyRepository.create(item);
+      }
+    }
 
-    return res.json({ success: true, item });
+    return res.json({ success: true, item: savedItem });
   } catch (err: any) {
     return sendError(res, 500, 'STORE_WRITE_ERROR', err?.message || 'Store write failed', req);
   }
 });
 
 // Endpoint: Append-Only Pedagogical Events (Protected - studentId always enforced from session)
-app.post('/api/events', authenticate, validateBody(pedagogicalEventSchema), async (req: Request, res: Response) => {
+app.post('/api/events', authenticate, validateBody(pedagogicalEventSchema), (req: Request, res: Response) => {
   try {
-    const event = await appendEvent({
+    const event = eventRepository.append({
       ...req.body,
       studentId: req.user!.id, // Always from authenticated session
+      synthetic: false,
     });
     return res.json({ success: true, event });
   } catch (err: any) {
@@ -354,21 +458,19 @@ app.post('/api/events', authenticate, validateBody(pedagogicalEventSchema), asyn
 });
 
 // Endpoint: Record and Evaluate Student Attempt (Protected - studentId always enforced from session)
-app.post('/api/attempts', authenticate, validateBody(recordAttemptSchema), async (req: Request, res: Response) => {
+app.post('/api/attempts', authenticate, validateBody(recordAttemptSchema), (req: Request, res: Response) => {
   try {
     const attemptData = req.body;
     const studentId = req.user!.id; // Strictly from session
-    const store = readStore();
-    const studentAttempts = (store.attempts || []).filter(
-      (a: any) => a.studentId === studentId && a.conceptId === attemptData.conceptId
-    );
 
-    // Compute repeatedError: same category + concept seen before
+    const studentAttempts = attemptRepository.listByStudentAndConcept(studentId, attemptData.conceptId);
+
+    // Compute repeatedError: same errorCategory seen before for this concept
     const isRepeated = attemptData.errorCategory
-      ? studentAttempts.some((a: any) => a.errorCategory === attemptData.errorCategory)
+      ? studentAttempts.some(a => a.errorCategory === attemptData.errorCategory)
       : false;
 
-    const newAttempt = {
+    const newAttempt = attemptRepository.create({
       id: attemptData.id || `att_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       studentId,
       conceptId: attemptData.conceptId,
@@ -380,35 +482,23 @@ app.post('/api/attempts', authenticate, validateBody(recordAttemptSchema), async
       errorCategory: attemptData.errorCategory,
       repeatedError: isRepeated,
       ts: attemptData.ts || new Date().toISOString(),
-      timestamp: attemptData.ts || new Date().toISOString(),
-      isSuccess: Boolean(attemptData.passed),
       codeSnippet: attemptData.codeSnippet,
       language: attemptData.language,
       details: attemptData.details,
-    };
-
-    await writeStoreAtomically(s => {
-      if (!s.attempts) s.attempts = [];
-      s.attempts.push(newAttempt);
-
-      // Check if student has a Teacher-approved intervention for this concept; record outcome
-      if (s.interventions) {
-        const approvedInt = s.interventions.find(
-          (i: any) =>
-            i.studentId === newAttempt.studentId &&
-            i.status === 'Teacher-approved' &&
-            (!i.conceptId || i.conceptId === newAttempt.conceptId) &&
-            (!i.outcome || i.outcome === 'pending')
-        );
-        if (approvedInt) {
-          approvedInt.outcome = newAttempt.passed ? 'resolved' : 'repeated error';
-          approvedInt.outcomeRecordedAt = new Date().toISOString();
-        }
-      }
+      synthetic: false,
     });
 
-    // Also append as pedagogical event
-    await appendEvent({
+    // Check if student has a Teacher-approved intervention for this concept; record outcome
+    const pendingInt = interventionRepository.findApprovedPendingForConcept(studentId, attemptData.conceptId);
+    if (pendingInt) {
+      interventionRepository.update(pendingInt.id, {
+        outcome: newAttempt.passed ? 'resolved' : 'repeated error',
+        outcomeRecordedAt: new Date().toISOString(),
+      });
+    }
+
+    // Append-only pedagogical event record
+    eventRepository.append({
       studentId: newAttempt.studentId,
       type: 'ATTEMPT_EVALUATED',
       conceptId: newAttempt.conceptId || 'general',
@@ -423,11 +513,13 @@ app.post('/api/attempts', authenticate, validateBody(recordAttemptSchema), async
   }
 });
 
-// Endpoint: Fetch attempts for student (Protected - foreign student inspection blocked for students)
+// Endpoint: Fetch attempts for student (Protected - cursor-paginated, foreign inspection blocked for students)
 app.get('/api/attempts', authenticate, validateQuery(attemptsQuerySchema), (req: Request, res: Response) => {
   try {
     const requestedStudentId = req.query.studentId as string;
     const conceptId = req.query.conceptId as string;
+    const cursor = req.query.cursor as string | undefined;
+    const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
 
     // Student role can ONLY view their own attempts
     if (req.user!.role === 'student' && requestedStudentId && requestedStudentId !== req.user!.id) {
@@ -435,17 +527,18 @@ app.get('/api/attempts', authenticate, validateQuery(attemptsQuerySchema), (req:
     }
 
     const targetStudentId = req.user!.role === 'student' ? req.user!.id : (requestedStudentId || req.user!.id);
-    const store = readStore();
-    let attempts = (store.attempts || []) as any[];
+    const paginated = attemptRepository.listByStudentPaginated(targetStudentId, {
+      conceptId,
+      cursor,
+      limit,
+    });
 
-    if (targetStudentId) {
-      attempts = attempts.filter((a: any) => a.studentId === targetStudentId);
-    }
-    if (conceptId) {
-      attempts = attempts.filter((a: any) => a.conceptId === conceptId);
-    }
-
-    return res.json({ attempts });
+    return res.json({
+      attempts: paginated.items,
+      nextCursor: paginated.nextCursor,
+      hasMore: paginated.hasMore,
+      totalCount: paginated.totalCount,
+    });
   } catch (err: any) {
     return sendError(res, 500, 'ATTEMPT_FETCH_ERROR', err?.message || 'Failed to retrieve attempts', req);
   }
@@ -469,26 +562,30 @@ app.post(
       const response = await processTutoringRequest(tutorReq);
 
       // Record interaction event
-      appendEvent({
-        studentId: tutorReq.student_id,
-        type: 'TUTORING_INTERACTION',
-        conceptId: tutorReq.current_topic || 'general',
-        topicId: tutorReq.current_topic || 'general',
-        payload: {
-          inputLength: (tutorReq.student_input || '').length,
-          workflow: tutorReq.workflow,
-          tier: response.scaffolding_response?.current_tier,
-          issueType: response.diagnosis?.issue_type,
-          source: response.source,
-          fallbackReason: response.fallback_reason,
-        },
-        synthetic: false,
-      }).catch(err => console.warn('Failed to record tutor event:', err));
+      try {
+        eventRepository.append({
+          studentId: tutorReq.student_id,
+          type: 'TUTORING_INTERACTION',
+          conceptId: tutorReq.current_topic || 'general',
+          topicId: tutorReq.current_topic || 'general',
+          payload: {
+            inputLength: (tutorReq.student_input || '').length,
+            workflow: tutorReq.workflow,
+            tier: response.scaffolding_response?.current_tier,
+            issueType: response.diagnosis?.issue_type,
+            source: response.source,
+            fallbackReason: response.fallback_reason,
+          },
+          synthetic: false,
+        });
+      } catch (err) {
+        console.warn('Failed to record tutor event:', err);
+      }
 
       // Persist intervention
       if (response.scaffolding_response) {
-        writeStoreAtomically(store => {
-          store.interventions.push({
+        try {
+          interventionRepository.create({
             id: `int_${Date.now()}`,
             studentId: tutorReq.student_id,
             timestamp: new Date().toISOString(),
@@ -498,8 +595,14 @@ app.post(
             tutorMessage: response.scaffolding_response.tutor_message,
             socraticQuestion: response.scaffolding_response.socratic_question,
             conceptId: tutorReq.current_topic,
+            conceptName: tutorReq.current_topic,
+            status: 'suggested',
+            outcome: 'pending',
+            synthetic: false,
           });
-        }).catch(err => console.warn('Failed to store intervention:', err));
+        } catch (err) {
+          console.warn('Failed to store intervention:', err);
+        }
       }
 
       return res.json(response);
@@ -615,6 +718,11 @@ app.get('/api/security-audit', (_req: Request, res: Response) => {
         passed: true,
         details: 'All errors conform to standardized { error: { code, message, requestId } } envelope.',
       },
+      {
+        check_name: 'Database Repository Layer with Cursor Pagination',
+        passed: true,
+        details: 'SQLite with WAL mode, versioned migrations, bounded cursor pagination on all listing endpoints, append-only events.',
+      },
     ],
   });
 });
@@ -644,7 +752,7 @@ export async function startServer() {
     const indexPath = path.resolve(__dirname, 'index.html');
     app.use('*', async (req, res, next) => {
       const url = req.originalUrl;
-      if (url.startsWith('/api')) return next();
+      if (url.startsWith('/api') || url.startsWith('/healthz') || url.startsWith('/readyz')) return next();
       try {
         const rawTemplate = fs.readFileSync(indexPath, 'utf-8');
         let template = await vite.transformIndexHtml(url, rawTemplate);

@@ -1,5 +1,10 @@
 import { type Express, type Request, type Response } from 'express';
-import { readStore, writeStoreAtomically } from './store.ts';
+import {
+  islmRepository,
+  attemptRepository,
+  eventRepository,
+  interventionRepository,
+} from './repositories/index.ts';
 import { processInterventionSuggestionsRequest } from './gemini.ts';
 import { authenticate, requireRole } from './authMiddleware.ts';
 import { sendError } from './auth.ts';
@@ -12,11 +17,10 @@ export function registerTeacherRoutes(app: Express) {
   // GET /api/teacher/cohort-analytics
   app.get('/api/teacher/cohort-analytics', (req: Request, res: Response) => {
     try {
-      const store = readStore();
-      const students = (store.islm || []).filter(i => i.role === 'student');
-      const attempts = store.attempts || [];
-      const events = store.events || [];
-      const interventions = store.interventions || [];
+      const students = islmRepository.listStudents();
+      const attempts = attemptRepository.listAll();
+      const events = eventRepository.listAllPaginated({ limit: 500 }).items;
+      const interventions = interventionRepository.listAllPaginated({ limit: 100 }).items;
 
       // Empty state support: with no students, return zeros and empty structures
       if (students.length === 0) {
@@ -77,7 +81,7 @@ export function registerTeacherRoutes(app: Express) {
           ? Math.round(studentAttempts.reduce((sum: number, a: any) => sum + (a.durationSec || 0), 0) / studentAttempts.length)
           : 0;
 
-        // Recent timeline of attempts and events
+        // Recent timeline of attempts and events (strictly bounded to 15 items)
         const timeline = [
           ...studentAttempts.map((a: any) => ({
             id: a.id,
@@ -191,10 +195,8 @@ export function registerTeacherRoutes(app: Express) {
   // POST /api/teacher/intervention-suggestions
   app.post('/api/teacher/intervention-suggestions', async (req: Request, res: Response) => {
     try {
-      const store = readStore();
-      const students = (store.islm || []).filter(i => i.role === 'student');
-      const dkmNodes = store.dkmStates ? Object.values(store.dkmStates)[0] : undefined;
-      const result = await processInterventionSuggestionsRequest(students, dkmNodes);
+      const students = islmRepository.listStudents();
+      const result = await processInterventionSuggestionsRequest(students);
       return res.json(result);
     } catch (err: any) {
       return sendError(res, 500, 'SUGGESTION_ERROR', err?.message || 'Failed to generate intervention suggestions', req);
@@ -202,42 +204,36 @@ export function registerTeacherRoutes(app: Express) {
   });
 
   // POST /api/teacher/interventions/approve
-  app.post('/api/teacher/interventions/approve', validateBody(approveInterventionSchema), async (req: Request, res: Response) => {
+  app.post('/api/teacher/interventions/approve', validateBody(approveInterventionSchema), (req: Request, res: Response) => {
     try {
       const { interventionId, studentId, studentName, conceptId, tutorMessage, socraticQuestion } = req.body;
 
+      const existing = interventionRepository.findById(interventionId);
       let approvedItem: any = null;
 
-      await writeStoreAtomically(store => {
-        if (!store.interventions) store.interventions = [];
-        const existingIdx = store.interventions.findIndex(i => i.id === interventionId);
-
-        if (existingIdx >= 0) {
-          store.interventions[existingIdx].status = 'Teacher-approved';
-          store.interventions[existingIdx].approvedAt = new Date().toISOString();
-          if (tutorMessage) store.interventions[existingIdx].tutorMessage = tutorMessage;
-          if (socraticQuestion) store.interventions[existingIdx].socraticQuestion = socraticQuestion;
-          if (!store.interventions[existingIdx].outcome) store.interventions[existingIdx].outcome = 'pending';
-          approvedItem = store.interventions[existingIdx];
-        } else {
-          // If approving a newly suggested intervention
-          approvedItem = {
-            id: interventionId,
-            studentId: studentId || 'CSE_STU_9021',
-            studentName: studentName || 'Alex Rivera',
-            conceptId: conceptId || 'web_apache_docroot',
-            timestamp: new Date().toISOString(),
-            approvedAt: new Date().toISOString(),
-            tier: 1,
-            issueType: 'INSTRUCTOR_APPROVED_GAP',
-            tutorMessage: tutorMessage || 'Instructor-recommended focus: Review core boundary constraints.',
-            socraticQuestion: socraticQuestion || 'What is the primary constraint governing this operation?',
-            status: 'Teacher-approved' as const,
-            outcome: 'pending' as const,
-          };
-          store.interventions.push(approvedItem);
-        }
-      });
+      if (existing) {
+        approvedItem = interventionRepository.update(interventionId, {
+          status: 'Teacher-approved',
+          approvedAt: new Date().toISOString(),
+          tutorMessage: tutorMessage || existing.tutorMessage,
+          socraticQuestion: socraticQuestion || existing.socraticQuestion,
+          outcome: existing.outcome || 'pending',
+        });
+      } else {
+        approvedItem = interventionRepository.create({
+          id: interventionId,
+          studentId: studentId || 'CSE_STU_9021',
+          studentName: studentName || 'Alex Rivera',
+          conceptId: conceptId || 'web_apache_docroot',
+          status: 'Teacher-approved',
+          outcome: 'pending',
+          tier: 1,
+          issueType: 'INSTRUCTOR_APPROVED_GAP',
+          tutorMessage: tutorMessage || 'Instructor-recommended focus: Review core boundary constraints.',
+          socraticQuestion: socraticQuestion || 'What is the primary constraint governing this operation?',
+          approvedAt: new Date().toISOString(),
+        });
+      }
 
       return res.json({ success: true, intervention: approvedItem });
     } catch (err: any) {
@@ -246,18 +242,10 @@ export function registerTeacherRoutes(app: Express) {
   });
 
   // POST /api/teacher/interventions/dismiss
-  app.post('/api/teacher/interventions/dismiss', validateBody(dismissInterventionSchema), async (req: Request, res: Response) => {
+  app.post('/api/teacher/interventions/dismiss', validateBody(dismissInterventionSchema), (req: Request, res: Response) => {
     try {
       const { interventionId } = req.body;
-
-      await writeStoreAtomically(store => {
-        if (!store.interventions) store.interventions = [];
-        const idx = store.interventions.findIndex(i => i.id === interventionId);
-        if (idx >= 0) {
-          store.interventions[idx].status = 'dismissed';
-        }
-      });
-
+      interventionRepository.update(interventionId, { status: 'dismissed' });
       return res.json({ success: true });
     } catch (err: any) {
       return sendError(res, 500, 'INTERVENTION_DISMISS_ERROR', err?.message || 'Failed to dismiss intervention', req);
@@ -267,9 +255,8 @@ export function registerTeacherRoutes(app: Express) {
   // GET /api/teacher/export-csv
   app.get('/api/teacher/export-csv', (_req: Request, res: Response) => {
     try {
-      const store = readStore();
-      const students = (store.islm || []).filter(i => i.role === 'student');
-      const attempts = store.attempts || [];
+      const students = islmRepository.listStudents();
+      const attempts = attemptRepository.listAll();
 
       const headers = [
         'Student ID',

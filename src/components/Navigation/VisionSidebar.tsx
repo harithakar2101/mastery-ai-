@@ -23,6 +23,7 @@ import {
   HeartPulse,
   Radio,
   LayoutDashboard,
+  GraduationCap,
   X,
 } from 'lucide-react';
 
@@ -78,6 +79,7 @@ export const VisionSidebar: React.FC<VisionSidebarProps> = ({
     currentWorkflow === 'CAD_LAB';
 
   const navItems = [
+    { id: 'STUDY_STUDIO', label: 'Study Studio', icon: GraduationCap },
     { id: 'CHATS', label: 'Chats', icon: MessageSquare },
     { id: 'MOCK_TEST', label: 'Mock Test', icon: FileCheck },
     ...(isMech ? [{ id: 'CAD_LAB', label: '3D CAD Lab', icon: Box }] : []),

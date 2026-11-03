@@ -170,10 +170,14 @@ export const liveTranscriptSchema = z.object({
 export const attemptsQuerySchema = z.object({
   studentId: z.string().optional(),
   conceptId: z.string().optional(),
+  cursor: z.string().optional(),
+  limit: z.string().optional(),
 });
 
 export const storeCollectionQuerySchema = z.object({
   studentId: z.string().optional(),
+  cursor: z.string().optional(),
+  limit: z.string().optional(),
 });
 
 // 8. Middleware Builders
