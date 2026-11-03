@@ -52,6 +52,8 @@ import { registerTeacherRoutes } from './server/teacherRoutes.ts';
 import { registerStudyRoutes } from './server/studyRoutes.ts';
 import { registerStudyStudioRoutes } from './server/studyStudioRoutes.ts';
 import { registerVideoRoutes } from './server/videoRoutes.ts';
+import { portfolioRouter, getShowcaseMetricsHandler } from './server/portfolioRoutes.ts';
+import { portfolioRepository } from './server/repositories/index.ts';
 
 dotenv.config();
 
@@ -218,6 +220,42 @@ registerTeacherRoutes(app);
 registerStudyRoutes(app);
 registerStudyStudioRoutes(app);
 registerVideoRoutes(app);
+
+// Mount Learner Portfolio & Showcase Metrics routes
+app.use('/api/portfolio', portfolioRouter);
+app.get('/api/showcase/metrics', getShowcaseMetricsHandler);
+
+// Public route /p/:slug with strict revocation & privacy checks
+app.get('/p/:slug', (req: Request, res: Response, next: NextFunction) => {
+  const { slug } = req.params;
+  const profile = portfolioRepository.getProfileBySlug(slug);
+  if (!profile || profile.visibility === 'private') {
+    return res.status(404).send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>404 - Portfolio Private or Not Found | CogniCSE</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { background-color: #060b13; color: #94a3b8; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1.5rem; box-sizing: border-box; }
+    .card { background: #0c1524; border: 1px solid #1e2f47; border-radius: 1rem; padding: 2.5rem; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
+    h1 { color: #f87171; font-size: 1.75rem; margin-top: 0; margin-bottom: 0.75rem; font-weight: 700; }
+    p { margin-bottom: 1.75rem; line-height: 1.6; font-size: 0.95rem; }
+    a { display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; transition: background 0.2s; }
+    a:hover { background: #1d4ed8; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>404 • Portfolio Private or Expired</h1>
+    <p>This learner portfolio is currently set to private, the link has been revoked by the student, or it does not exist.</p>
+    <a href="/">Return to CogniCSE</a>
+  </div>
+</body>
+</html>`);
+  }
+  next();
+});
 
 // Endpoint: Full User State (Protected - studentId always derived from session)
 app.get('/api/user/state', authenticate, (req: Request, res: Response) => {

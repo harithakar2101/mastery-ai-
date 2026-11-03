@@ -1,6 +1,20 @@
 import { getDb } from '../db/connection.ts';
-import { PortfolioDbRecord } from './types.ts';
+import { PortfolioDbRecord, PortfolioProfileDbRecord } from './types.ts';
 import { PaginationOptions, PaginatedResult, encodeCursor, decodeCursor, sanitizeLimit } from '../utils/pagination.ts';
+
+function rowToProfile(row: any): PortfolioProfileDbRecord {
+  return {
+    studentId: row.student_id,
+    slug: row.slug,
+    visibility: row.visibility as 'private' | 'link_only' | 'public',
+    headline: row.headline || undefined,
+    bio: row.bio || undefined,
+    avatarUrl: row.avatar_url || undefined,
+    socialLinks: row.social_links_json ? JSON.parse(row.social_links_json) : {},
+    customSections: row.custom_sections_json ? JSON.parse(row.custom_sections_json) : [],
+    updatedAt: row.updated_at,
+  };
+}
 
 function rowToPortfolio(row: any): PortfolioDbRecord {
   return {
@@ -156,5 +170,93 @@ export const portfolioRepository = {
     const db = getDb();
     const res = db.prepare('DELETE FROM portfolio WHERE student_id = ?').run(studentId);
     return res.changes;
+  },
+
+  getProfile(studentId: string): PortfolioProfileDbRecord | null {
+    const db = getDb();
+    const row = db.prepare('SELECT * FROM portfolio_profiles WHERE student_id = ?').get(studentId);
+    return row ? rowToProfile(row) : null;
+  },
+
+  getProfileBySlug(slug: string): PortfolioProfileDbRecord | null {
+    const db = getDb();
+    const row = db.prepare('SELECT * FROM portfolio_profiles WHERE slug = ?').get(slug);
+    return row ? rowToProfile(row) : null;
+  },
+
+  upsertProfile(data: {
+    studentId: string;
+    slug?: string;
+    visibility?: 'private' | 'link_only' | 'public';
+    headline?: string;
+    bio?: string;
+    avatarUrl?: string;
+    socialLinks?: Record<string, string>;
+    customSections?: any[];
+  }): PortfolioProfileDbRecord {
+    const db = getDb();
+    const existing = this.getProfile(data.studentId);
+    const now = new Date().toISOString();
+
+    const slug = data.slug || existing?.slug || `student-${data.studentId.substring(0, 6)}-${Math.random().toString(36).substring(2, 6)}`;
+    const visibility = data.visibility !== undefined ? data.visibility : (existing?.visibility || 'private');
+    const headline = data.headline !== undefined ? data.headline : (existing?.headline || '');
+    const bio = data.bio !== undefined ? data.bio : (existing?.bio || '');
+    const avatarUrl = data.avatarUrl !== undefined ? data.avatarUrl : (existing?.avatarUrl || '');
+    const socialLinks = data.socialLinks !== undefined ? data.socialLinks : (existing?.socialLinks || {});
+    const customSections = data.customSections !== undefined ? data.customSections : (existing?.customSections || []);
+
+    if (existing) {
+      db.prepare(`
+        UPDATE portfolio_profiles SET
+          slug = ?,
+          visibility = ?,
+          headline = ?,
+          bio = ?,
+          avatar_url = ?,
+          social_links_json = ?,
+          custom_sections_json = ?,
+          updated_at = ?
+        WHERE student_id = ?
+      `).run(
+        slug,
+        visibility,
+        headline,
+        bio,
+        avatarUrl,
+        JSON.stringify(socialLinks),
+        JSON.stringify(customSections),
+        now,
+        data.studentId
+      );
+    } else {
+      db.prepare(`
+        INSERT INTO portfolio_profiles (student_id, slug, visibility, headline, bio, avatar_url, social_links_json, custom_sections_json, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        data.studentId,
+        slug,
+        visibility,
+        headline,
+        bio,
+        avatarUrl,
+        JSON.stringify(socialLinks),
+        JSON.stringify(customSections),
+        now
+      );
+    }
+
+    return this.getProfile(data.studentId)!;
+  },
+
+  revokeProfile(studentId: string): boolean {
+    const db = getDb();
+    const res = db.prepare(`
+      UPDATE portfolio_profiles SET
+        visibility = 'private',
+        updated_at = ?
+      WHERE student_id = ?
+    `).run(new Date().toISOString(), studentId);
+    return res.changes > 0;
   },
 };

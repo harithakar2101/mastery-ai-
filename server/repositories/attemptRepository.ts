@@ -128,6 +128,10 @@ export const attemptRepository = {
     return rows.map(rowToAttempt);
   },
 
+  listByStudent(studentId: string): AttemptDbRecord[] {
+    return this.listAllForStudent(studentId);
+  },
+
   listAll(): AttemptDbRecord[] {
     const db = getDb();
     const rows = db.prepare('SELECT * FROM attempts ORDER BY ts ASC').all();

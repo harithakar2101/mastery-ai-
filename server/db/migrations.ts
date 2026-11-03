@@ -283,6 +283,28 @@ export const migrations: Migration[] = [
       `);
     },
   },
+  {
+    version: 5,
+    name: '005_portfolio_profiles_and_badges',
+    up: (db: Database.Database) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS portfolio_profiles (
+          student_id TEXT PRIMARY KEY,
+          slug TEXT UNIQUE NOT NULL,
+          visibility TEXT NOT NULL DEFAULT 'private',
+          headline TEXT,
+          bio TEXT,
+          avatar_url TEXT,
+          social_links_json TEXT DEFAULT '{}',
+          custom_sections_json TEXT DEFAULT '[]',
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_portfolio_profiles_slug ON portfolio_profiles(slug);
+        CREATE INDEX IF NOT EXISTS idx_portfolio_profiles_visibility ON portfolio_profiles(visibility);
+      `);
+    },
+  },
 ];
 
 export function runMigrations(targetDb?: Database.Database): number {

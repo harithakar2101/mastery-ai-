@@ -47,9 +47,10 @@ authRouter.post('/register', validateBody(registerSchema), async (req: Request, 
     // Only a valid teacher invite code grants the 'teacher' role; otherwise always 'student'
     const role: UserRole = inviteCode && inviteCode.trim() === TEACHER_INVITE_CODE ? 'teacher' : 'student';
 
+    const suffix = `${Date.now().toString().slice(-4)}${Math.floor(10 + Math.random() * 90)}`;
     const userId = role === 'teacher'
-      ? `FACULTY_${Math.floor(100 + Math.random() * 900)}`
-      : `CSE_STU_${Math.floor(1000 + Math.random() * 9000)}`;
+      ? `FACULTY_${suffix}`
+      : `CSE_STU_${suffix}`;
 
     const passwordHash = await hashPassword(password);
     const now = new Date().toISOString();
@@ -146,6 +147,78 @@ authRouter.post('/login', validateBody(loginSchema), async (req: Request, res: R
 authRouter.post('/logout', (_req: Request, res: Response) => {
   clearSessionCookie(res);
   return res.json({ success: true, message: 'Logged out successfully.' });
+});
+
+// Demo Mode: Sandboxed Demo Account Login
+authRouter.post('/demo-login', async (req: Request, res: Response) => {
+  try {
+    const demoEmail = 'demo.student@cognicse.edu';
+    let user = userRepository.findByEmail(demoEmail);
+
+    if (!user) {
+      const now = new Date().toISOString();
+      const passwordHash = await hashPassword('DemoPass123!');
+      user = userRepository.create({
+        id: 'DEMO_STUDENT_001',
+        name: 'Alex Chen (Demo Student)',
+        email: demoEmail,
+        role: 'student',
+        plan: 'Free Plan',
+        degree: 'B.Tech in Computer Science & Engineering',
+        preferredLanguages: ['python', 'javascript'],
+        streakDays: 7,
+        testsCompleted: 12,
+        overallMastery: 0.88,
+        theme: 'dark',
+        passwordHash,
+        tokenVersion: 1,
+        createdAt: now,
+        updatedAt: now,
+        synthetic: true,
+      });
+
+      islmRepository.upsert({
+        student_id: user.id,
+        name: user.name,
+        email: user.email,
+        role: 'student',
+        course_track: 'Data Structures & Algorithms',
+        overall_mastery: 0.88,
+        topic_mastery: {
+          'bkt-recursion': 0.92,
+          'cad-csg-booleans': 0.86,
+          'web-dom-state': 0.85,
+          'ai-bkt-inference': 0.89,
+        },
+        recent_misconceptions: [],
+        scaffolding_tier_required: 1,
+        error_count: 2,
+        independent_solves: 8,
+        scaffolding_fading_index: 0.75,
+        time_spent_mins: 180,
+        history: [],
+      });
+    }
+
+    const token = createSessionToken(user);
+    setSessionCookie(res, token);
+
+    const islm = islmRepository.findByStudentId(user.id);
+    const sessionsResult = sessionRepository.findByStudentPaginated(user.id, { limit: 20 });
+    const dkmNodes = dkmStateRepository.findByStudentId(user.id);
+
+    return res.json({
+      success: true,
+      user: sanitizeUser(user),
+      islm: islm || null,
+      sessions: sessionsResult.items,
+      dkmNodes,
+      token,
+      isDemo: true,
+    });
+  } catch (err: any) {
+    return sendError(res, 500, 'DEMO_LOGIN_FAILED', err?.message || 'Failed to initialize demo session', req);
+  }
 });
 
 // 4. Token Refresh / Rotation

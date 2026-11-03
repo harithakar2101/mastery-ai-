@@ -121,6 +121,18 @@ export interface PortfolioDbRecord {
   updatedAt: string;
 }
 
+export interface PortfolioProfileDbRecord {
+  studentId: string;
+  slug: string;
+  visibility: 'private' | 'link_only' | 'public';
+  headline?: string;
+  bio?: string;
+  avatarUrl?: string;
+  socialLinks?: Record<string, string>;
+  customSections?: any[];
+  updatedAt: string;
+}
+
 export interface RenderedVideoDbRecord {
   id: string;
   studentId: string;
