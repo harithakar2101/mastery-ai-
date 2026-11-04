@@ -58,7 +58,7 @@ export const VisionSolveChat: React.FC = () => {
 
     setInputPrompt('');
     setIsThinking(true);
-    setThinkingStep('CogniCSE Pedagogical Engine evaluating query...');
+    setThinkingStep('Mastery.ai Pedagogical Engine evaluating query...');
 
     try {
       await sendChatMessage(query);
@@ -223,7 +223,7 @@ export const VisionSolveChat: React.FC = () => {
                 <div className="bg-[#0c1421] border border-[#1a273b] rounded-2xl p-4 text-xs text-slate-300 space-y-2">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
-                    <span className="font-semibold text-blue-400">CogniCSE Pedagogical Engine is thinking...</span>
+                    <span className="font-semibold text-blue-400">Mastery.ai Pedagogical Engine is thinking...</span>
                   </div>
                   {thinkingStep && (
                     <div className="text-[11px] text-slate-400 font-mono animate-pulse pl-4">
@@ -308,7 +308,7 @@ export const VisionSolveChat: React.FC = () => {
               value={inputPrompt}
               onChange={e => setInputPrompt(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
-              placeholder="Ask CogniCSE for Socratic guidance, code analysis, or concept visualization..."
+              placeholder="Ask Mastery.ai for Socratic guidance, code analysis, or concept visualization..."
               className="flex-1 bg-transparent px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none"
             />
 

@@ -8,7 +8,7 @@ import { userRepository } from '../server/repositories/index.ts';
 const teacherUser = {
   id: 'FACULTY_SSE_TEST',
   name: 'Prof. Live Tester',
-  email: 'live.prof@cognicse.edu',
+  email: 'live.prof@mastery.ai',
   role: 'teacher' as const,
   plan: 'Campus License',
   tokenVersion: 1,
@@ -17,7 +17,7 @@ const teacherUser = {
 const studentUser = {
   id: 'STU_SSE_TEST_1',
   name: 'Student SSE 1',
-  email: 'stu.sse1@cognicse.edu',
+  email: 'stu.sse1@mastery.ai',
   role: 'student' as const,
   plan: 'Free Plan',
   tokenVersion: 1,

@@ -7,14 +7,14 @@ export function getTutoringFallback(tutorReq: any) {
   const lang = tutorReq.language || 'en';
 
   if (isGreeting) {
-    let tutorGreeting = "Hello! I am your CogniCSE Technical Tutor. How can I help you master Computer Science or Mechanical Engineering today?\n\nWe can explore core tracks like:\n• Mechanical Engineering (CAD) (2D Sketch DOF, Constraints, Hub/Bore Concentricity, Mass Evaluation, FOS >= 2.0)\n• Data Structures & Algorithms (Trees, Graphs, Dijkstra, Dynamic Programming)\n• Computer Systems & OS (Pointers, Memory Allocation, Caching, Concurrency)\n• Computer Networks (Sockets, OSI Layers, TCP Handshake, Ports)\n• Or debug your current code/model in the Polyglot Sandbox!";
+    let tutorGreeting = "Hello! I am your Mastery.ai Technical Tutor. How can I help you master Computer Science or Mechanical Engineering today?\n\nWe can explore core tracks like:\n• Mechanical Engineering (CAD) (2D Sketch DOF, Constraints, Hub/Bore Concentricity, Mass Evaluation, FOS >= 2.0)\n• Data Structures & Algorithms (Trees, Graphs, Dijkstra, Dynamic Programming)\n• Computer Systems & OS (Pointers, Memory Allocation, Caching, Concurrency)\n• Computer Networks (Sockets, OSI Layers, TCP Handshake, Ports)\n• Or debug your current code/model in the Polyglot Sandbox!";
     let socraticQ = 'Which engineering track or concept would you like to explore first?';
 
     if (lang === 'ta') {
-      tutorGreeting = "வணக்கம்! நான் உங்கள் CogniCSE வழிகாட்டி. கணினி அறிவியல் அல்லது மெக்கானிக்கல் இன்ஜினியரிங் (CAD) பாடங்களில் எதைக் கற்க விரும்புகிறீர்கள்?\n\n• மெக்கானிக்கல் CAD (2D Sketch DOF, Constraints, FOS >= 2.0)\n• Data Structures & Algorithms (Trees, Graphs, Dijkstra)\n• Computer Systems & OS (Pointers, Memory Allocation, Caching)\n• Computer Networks (Sockets, OSI Layers, TCP Handshake)";
+      tutorGreeting = "வணக்கம்! நான் உங்கள் Mastery.ai வழிகாட்டி. கணினி அறிவியல் அல்லது மெக்கானிக்கல் இன்ஜினியரிங் (CAD) பாடங்களில் எதைக் கற்க விரும்புகிறீர்கள்?\n\n• மெக்கானிக்கல் CAD (2D Sketch DOF, Constraints, FOS >= 2.0)\n• Data Structures & Algorithms (Trees, Graphs, Dijkstra)\n• Computer Systems & OS (Pointers, Memory Allocation, Caching)\n• Computer Networks (Sockets, OSI Layers, TCP Handshake)";
       socraticQ = 'எந்த பாடப்பிரிவை முதலில் தொடங்க விரும்புகிறீர்கள்?';
     } else if (lang === 'hi') {
-      tutorGreeting = "नमस्ते! मैं आपका CogniCSE तकनीकी शिक्षक हूँ। आज आप कंप्यूटर साइंस या मैकेनिकल इंजीनियरिंग (CAD) में क्या सीखना चाहते हैं?\n\n• मैकेनिकल CAD (2D Sketch DOF, Constraints, FOS >= 2.0)\n• Data Structures & Algorithms (Trees, Graphs, Dijkstra)\n• Computer Systems & OS (Pointers, Memory Allocation, Caching)\n• Computer Networks (Sockets, OSI Layers, TCP Handshake)";
+      tutorGreeting = "नमस्ते! मैं आपका Mastery.ai तकनीकी शिक्षक हूँ। आज आप कंप्यूटर साइंस या मैकेनिकल इंजीनियरिंग (CAD) में क्या सीखना चाहते हैं?\n\n• मैकेनिकल CAD (2D Sketch DOF, Constraints, FOS >= 2.0)\n• Data Structures & Algorithms (Trees, Graphs, Dijkstra)\n• Computer Systems & OS (Pointers, Memory Allocation, Caching)\n• Computer Networks (Sockets, OSI Layers, TCP Handshake)";
       socraticQ = 'आप पहले किस इंजीनियरिंग ट्रैक का अभ्यास करना चाहेंगे?';
     }
 

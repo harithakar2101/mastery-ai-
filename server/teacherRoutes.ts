@@ -321,7 +321,7 @@ export function registerTeacherRoutes(app: Express) {
       const csvContent = [headers.join(','), ...rows].join('\n');
 
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', 'attachment; filename="cognicse_cohort_metrics.csv"');
+      res.setHeader('Content-Disposition', 'attachment; filename="mastery-ai_cohort_metrics.csv"');
       return res.status(200).send(csvContent);
     } catch (err: any) {
       return sendError(res, 500, 'CSV_EXPORT_ERROR', err?.message || 'Failed to export CSV', _req);

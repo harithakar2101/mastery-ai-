@@ -131,7 +131,7 @@ export const ShowcaseLandingPage: React.FC<{
 
   const faqs = [
     {
-      q: 'How does CogniCSE calculate mastery without subjective grading?',
+      q: 'How does Mastery.ai calculate mastery without subjective grading?',
       a: 'We implement Bayesian Knowledge Tracing (BKT) with parameters p(L0), p(T), p(G), and p(S). Every mastery claim is mathematically updated following verified unit tests, code sandbox executions, and CAD constraint evaluations. Manual score alterations are physically impossible.',
     },
     {
@@ -164,7 +164,7 @@ export const ShowcaseLandingPage: React.FC<{
           </div>
           <div>
             <span className="font-bold text-slate-100 text-sm sm:text-base tracking-wide flex items-center gap-1.5">
-              <span>CogniCSE</span>
+              <span>Mastery.ai</span>
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-950/80 text-blue-400 border border-blue-800/80 font-mono">
                 Mastery AI
               </span>
@@ -235,7 +235,7 @@ export const ShowcaseLandingPage: React.FC<{
             <div className="flex items-center justify-between text-xs text-slate-400 font-mono">
               <span className="flex items-center gap-2 text-emerald-400">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>CogniCSE Simulation Engine • Ready</span>
+                <span>Mastery.ai Simulation Engine • Ready</span>
               </span>
               <span>1280x720 Canvas Stream</span>
             </div>
@@ -321,10 +321,10 @@ export const ShowcaseLandingPage: React.FC<{
         <div className="text-center space-y-3">
           <Badge variant="purple" size="sm">The Closed Pedagogical Loop</Badge>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-100">
-            How CogniCSE Guarantees Engineering Mastery
+            How Mastery.ai Guarantees Engineering Mastery
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto">
-            Traditional tutorials leave blind spots. CogniCSE closes the feedback loop between diagnosis, practice, adaptive spacing, and immutable verification.
+            Traditional tutorials leave blind spots. Mastery.ai closes the feedback loop between diagnosis, practice, adaptive spacing, and immutable verification.
           </p>
         </div>
 
@@ -462,7 +462,7 @@ export const ShowcaseLandingPage: React.FC<{
           <h2 className="text-xl sm:text-2xl font-bold text-slate-100">
             Frequently Asked Questions
           </h2>
-          <p className="text-xs text-slate-400">Everything you need to know about the CogniCSE platform.</p>
+          <p className="text-xs text-slate-400">Everything you need to know about the Mastery.ai platform.</p>
         </div>
 
         <div className="space-y-3">

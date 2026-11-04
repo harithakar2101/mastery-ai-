@@ -1,9 +1,9 @@
 # MasteryBand BLE Smart Band Firmware
 
-Open-source firmware specification and reference implementation for the **CogniCSE MasteryBand** wearable device (ESP32 / Nordic nRF52).
+Open-source firmware specification and reference implementation for the **Mastery.ai MasteryBand** wearable device (ESP32 / Nordic nRF52).
 
 ## Overview
-The MasteryBand provides low-friction tactile telemetry between the student and the CogniCSE Pedagogical AI Engine.
+The MasteryBand provides low-friction tactile telemetry between the student and the Mastery.ai Pedagogical AI Engine.
 It uses **Web Bluetooth** to broadcast student engagement cues directly to the browser with zero cognitive overhead, and provides subtle haptic vibration confirmations.
 
 ## BLE GATT Architecture

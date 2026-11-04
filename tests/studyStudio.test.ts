@@ -19,7 +19,7 @@ let baseUrl: string;
 const studentUser = {
   id: 'STUDY_STUDIO_TEST_STU',
   name: 'Study Studio Tester',
-  email: 'studystudio.test@cognicse.edu',
+  email: 'studystudio.test@mastery.ai',
   role: 'student' as const,
   plan: 'Pro Plan',
   tokenVersion: 1,

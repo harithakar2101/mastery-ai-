@@ -54,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenPretest, onOpenSecurityAud
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-extrabold text-base tracking-tight text-white">CogniCSE</span>
+                <span className="font-extrabold text-base tracking-tight text-white">Mastery.ai</span>
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-indigo-950 text-indigo-300 border border-indigo-800/80 px-2 py-0.5 rounded-full">
                   1-on-1 Socratic
                 </span>

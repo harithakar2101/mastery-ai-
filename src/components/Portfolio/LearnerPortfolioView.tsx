@@ -240,7 +240,7 @@ export const LearnerPortfolioView: React.FC = () => {
       <div className="hidden print:block border-b-2 border-slate-900 pb-4 mb-6">
         <h1 className="text-2xl font-bold text-slate-900">{profile?.name || userProfile.name}</h1>
         <p className="text-sm text-slate-700">{profile?.degree || 'Computer Science & Engineering'}</p>
-        <p className="text-xs text-slate-500 font-mono">CogniCSE Verified Academic Credentials • Issued {new Date().toLocaleDateString()}</p>
+        <p className="text-xs text-slate-500 font-mono">Mastery.ai Verified Academic Credentials • Issued {new Date().toLocaleDateString()}</p>
       </div>
 
       {/* Profile Header Hero */}
@@ -258,7 +258,7 @@ export const LearnerPortfolioView: React.FC = () => {
               </div>
               <div
                 className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1 rounded-full border-2 border-[#09111e] shadow-xs"
-                title="Verified by CogniCSE BKT Mastery Engine"
+                title="Verified by Mastery.ai BKT Mastery Engine"
               >
                 <ShieldCheck className="w-4 h-4" />
               </div>
@@ -616,7 +616,7 @@ export const LearnerPortfolioView: React.FC = () => {
               </div>
               <h3 className="text-base font-bold text-slate-100">{selectedEvidence.name}</h3>
               <p className="text-xs text-slate-400">
-                CogniCSE Bayesian posterior probability: <strong className="text-emerald-400 font-mono">{selectedEvidence.masteryLevel}%</strong>. Evaluated across {selectedEvidence.evidenceCount} empirical attempts.
+                Mastery.ai Bayesian posterior probability: <strong className="text-emerald-400 font-mono">{selectedEvidence.masteryLevel}%</strong>. Evaluated across {selectedEvidence.evidenceCount} empirical attempts.
               </p>
             </div>
 
@@ -669,7 +669,7 @@ export const LearnerPortfolioView: React.FC = () => {
 
             <div className="space-y-1">
               <span className="text-[11px] font-mono text-amber-400 uppercase tracking-widest">
-                CogniCSE Certified Competency
+                Mastery.ai Certified Competency
               </span>
               <h2 className="text-xl font-bold text-slate-100">{selectedCertificate.name}</h2>
               <p className="text-xs text-slate-400 max-w-md mx-auto">{selectedCertificate.description}</p>

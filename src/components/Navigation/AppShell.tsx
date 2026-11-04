@@ -236,7 +236,7 @@ export const AppShell: React.FC<AppShellProps> = ({
             {/* Breadcrumb Path */}
             <nav className="flex items-center gap-1.5 font-medium text-xs text-slate-400 truncate" aria-label="Breadcrumb">
               <span className="text-slate-300 font-bold hover:text-white transition-colors cursor-pointer" onClick={() => setCurrentWorkflow('STUDY_STUDIO')}>
-                CogniCSE
+                Mastery.ai
               </span>
               <span className="text-slate-600">/</span>
               <span className="text-blue-300 font-semibold truncate">

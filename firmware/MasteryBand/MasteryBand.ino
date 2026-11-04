@@ -1,5 +1,5 @@
 /*
- * CogniCSE MasteryBand BLE Peripheral Firmware
+ * Mastery.ai MasteryBand BLE Peripheral Firmware
  * Target: ESP32-C3 / ESP32-S3 / nRF52840
  * Service UUID: 12345678-1234-5678-1234-56789abcdef0
  */
@@ -73,7 +73,7 @@ void setup() {
   pinMode(PIN_HAPTIC_MOTOR, OUTPUT);
   digitalWrite(PIN_HAPTIC_MOTOR, LOW);
 
-  BLEDevice::init("CogniCSE-MasteryBand");
+  BLEDevice::init("Mastery.ai-MasteryBand");
   pServer = BLEDevice::createServer();
   pServer->setCallbacks(new ServerCallbacks());
 

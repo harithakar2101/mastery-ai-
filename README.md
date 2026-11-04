@@ -1,4 +1,4 @@
-# CogniCSE: Enterprise-Grade Pedagogical Closed-Loop Learning Support System
+# Mastery.ai: Enterprise-Grade Pedagogical Closed-Loop Learning Support System
 
 [![Release Candidate](https://img.shields.io/badge/Release-RC--1.0.0-emerald.svg)](https://github.com/harithakar2101/mastery-ai-)
 [![Tests](https://img.shields.io/badge/Tests-100%2F100%20Passing-brightgreen.svg)](https://github.com/harithakar2101/mastery-ai-)
@@ -7,7 +7,7 @@
 [![Engine](https://img.shields.io/badge/AI-Gemini%202.5%20Flash-blueviolet.svg)](https://ai.google.dev)
 [![Database](https://img.shields.io/badge/Storage-SQLite%20(WAL%20Mode)-003B57.svg)](https://sqlite.org)
 
-CogniCSE is an enterprise-grade, pedagogical 1-on-1 closed-loop learning platform engineered for Computer Science & Engineering (CSE) and Mechanical Engineering (CAD) students. Rather than functioning as a direct answer or code generator, CogniCSE acts as a rigorous Socratic mentor enforcing an **Anti-Answer Protocol**, continuous **Bayesian Knowledge Tracing (BKT)**, an **Individual Student Learning Model (ISLM)**, an **SM-2 / Leitner spaced repetition review loop**, and live instructor telemetry.
+Mastery.ai is an enterprise-grade, pedagogical 1-on-1 closed-loop learning platform engineered for Computer Science & Engineering (CSE) and Mechanical Engineering (CAD) students. Rather than functioning as a direct answer or code generator, Mastery.ai acts as a rigorous Socratic mentor enforcing an **Anti-Answer Protocol**, continuous **Bayesian Knowledge Tracing (BKT)**, an **Individual Student Learning Model (ISLM)**, an **SM-2 / Leitner spaced repetition review loop**, and live instructor telemetry.
 
 ---
 
@@ -27,7 +27,7 @@ CogniCSE is an enterprise-grade, pedagogical 1-on-1 closed-loop learning platfor
 
 ## 1. Fast Setup (< 5 Minutes)
 
-CogniCSE is designed to boot instantly in local development with zero external database dependencies. The embedded SQLite repository with automatic schema migrations starts automatically.
+Mastery.ai is designed to boot instantly in local development with zero external database dependencies. The embedded SQLite repository with automatic schema migrations starts automatically.
 
 ### Prerequisites
 - **Node.js**: `v20.x` or higher (`v22` / `v24` / `v26` supported).
@@ -56,9 +56,9 @@ Open your browser at **`http://localhost:3000`**.
 
 | Role | Email Address | Password | Permissions & Scope |
 | :--- | :--- | :--- | :--- |
-| **Admin** | `admin@cognicse.edu` | `AdminPass123!` | System settings, AI quotas & costs, 30-prompt anti-answer audits, teacher provisioning, cohort seeding/clearing. |
-| **Faculty / Teacher** | `teacher@cognicse.edu` | `TeacherPass123!` | Live class broadcasts, cohort heatmaps, BKT drilldown, AI intervention dispatch, empirical study trials. |
-| **Student** | `student@cognicse.edu` | `StudentPass123!` | Interactive tutor, 3D CAD Lab, Web Dev Lab, Study Studio, AI Video generation, verifiable Learner Portfolio. |
+| **Admin** | `admin@mastery.ai` | `AdminPass123!` | System settings, AI quotas & costs, 30-prompt anti-answer audits, teacher provisioning, cohort seeding/clearing. |
+| **Faculty / Teacher** | `teacher@mastery.ai` | `TeacherPass123!` | Live class broadcasts, cohort heatmaps, BKT drilldown, AI intervention dispatch, empirical study trials. |
+| **Student** | `student@mastery.ai` | `StudentPass123!` | Interactive tutor, 3D CAD Lab, Web Dev Lab, Study Studio, AI Video generation, verifiable Learner Portfolio. |
 
 *(New student accounts can be registered self-service on the login screen. Teachers must be created by an Admin or with an invite code).*
 
@@ -66,7 +66,7 @@ Open your browser at **`http://localhost:3000`**.
 
 ## 2. Mermaid System Architecture
 
-CogniCSE couples client-side simulation runtimes and sensor proxies with an immutable pedagogical event bus, Bayesian knowledge estimation, and a hardened Gemini AI pipeline.
+Mastery.ai couples client-side simulation runtimes and sensor proxies with an immutable pedagogical event bus, Bayesian knowledge estimation, and a hardened Gemini AI pipeline.
 
 ```mermaid
 flowchart TD
@@ -91,7 +91,7 @@ flowchart TD
         Gemini["Google Gemini API:\n- Gemini 2.5 Flash (Tutoring/Summary)\n- Gemini TTS (Audio Synthesis)\n- Veo (Cinematic Mode)"]
     end
 
-    subgraph Storage["SQLite WAL Repository Layer (data/cognicse.db)"]
+    subgraph Storage["SQLite WAL Repository Layer (data/mastery.db)"]
         Repos["Typed Repositories:\n- UserRepository\n- DkmRepository\n- PedagogicalEventRepository\n- SessionRepository\n- StudyStudioRepository\n- VideoRepository\n- AuditLogRepository"]
         Migrations["Versioned SQL Migrations:\n001: Schema Init\n002: Indexes & Quotas\n003: Video Storyboards\n004: Studio Schedules\n005: Portfolio Showcase\n006: Audit & Anti-Answer Evals"]
     end
@@ -205,11 +205,11 @@ All endpoints return uniform JSON responses. In the event of an error, the respo
 
 ## 4. Data Model & Repository Layer
 
-All persistent state is managed through typed repository interfaces backed by **SQLite with Write-Ahead Logging (WAL)** enabled (`data/cognicse.db`). Routes never query the database directly.
+All persistent state is managed through typed repository interfaces backed by **SQLite with Write-Ahead Logging (WAL)** enabled (`data/mastery.db`). Routes never query the database directly.
 
 ```
 data/
-└── cognicse.db             # SQLite WAL Database File
+└── mastery.db             # SQLite WAL Database File
 server/
 ├── repositories/
 │   ├── userRepository.ts       # Authentication, profiles, and retention
@@ -285,23 +285,23 @@ A production-ready, multi-stage `Dockerfile` and `docker-compose.yml` are includ
 docker compose up -d --build
 
 # Inspect running logs with PII redaction
-docker compose logs -f cognicse-app
+docker compose logs -f mastery-app
 
 # Check container health status
-docker inspect --format='{{json .State.Health}}' $(docker compose ps -q cognicse-app)
+docker inspect --format='{{json .State.Health}}' $(docker compose ps -q mastery-app)
 ```
 
 ### 6.2 Google Cloud Run Deployment
 
-CogniCSE is Cloud Run ready. Set the execution environment variables directly in Google Cloud Console or via the `gcloud` CLI:
+Mastery.ai is Cloud Run ready. Set the execution environment variables directly in Google Cloud Console or via the `gcloud` CLI:
 
 ```bash
 # 1. Build and push container to Google Artifact Registry
-gcloud builds submit --tag gcr.io/PROJECT_ID/cognicse:rc-1.0.0
+gcloud builds submit --tag gcr.io/PROJECT_ID/mastery:rc-1.0.0
 
 # 2. Deploy to Cloud Run with persistent secrets
-gcloud run deploy cognicse \
-  --image gcr.io/PROJECT_ID/cognicse:rc-1.0.0 \
+gcloud run deploy mastery-ai \
+  --image gcr.io/PROJECT_ID/mastery:rc-1.0.0 \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
@@ -318,14 +318,14 @@ A nightly backup command is pre-configured to perform safe, non-blocking snapsho
 npm run backup
 
 # Snapshots are safely stored in:
-# data/backups/cognicse-backup-YYYY-MM-DD-HHMMSS.db
+# data/backups/mastery-backup-YYYY-MM-DD-HHMMSS.db
 ```
 
 ---
 
 ## 7. Security, Privacy & Responsible AI Model
 
-CogniCSE was built from the ground up under a strict **Zero-Harm Pedagogical Security Architecture**:
+Mastery.ai was built from the ground up under a strict **Zero-Harm Pedagogical Security Architecture**:
 
 ### 1. Multi-Tier Role-Based Access Control (RBAC)
 - All roles (`student`, `teacher`, `admin`) are stored exclusively on the server.
@@ -344,7 +344,7 @@ CogniCSE was built from the ground up under a strict **Zero-Harm Pedagogical Sec
 - Verified against 7 adversarial injection vectors (DAN jailbreaks, base64 bypasses, delimiter injections, role simulations).
 
 ### 3. Anti-Answer Protocol & Socratic Scaffolding
-- To ensure students genuinely learn rather than outsource thinking, CogniCSE enforces a strict **Anti-Answer Policy**.
+- To ensure students genuinely learn rather than outsource thinking, Mastery.ai enforces a strict **Anti-Answer Policy**.
 - When asked for full code dumps or final homework answers, the tutor withholds the solution and instead provides 4-tier pedagogical scaffolding:
   - **Tier 1 (Metacognitive)**: Problem decomposition question.
   - **Tier 2 (Conceptual)**: Highlighting the core theorem or invariant.
@@ -369,19 +369,19 @@ CogniCSE was built from the ground up under a strict **Zero-Harm Pedagogical Sec
 
 ## 8. 10-Student Cohort Pilot Study Guide & Demo Script
 
-Follow this 2-minute demonstration flow to evaluate CogniCSE's complete closed-loop architecture:
+Follow this 2-minute demonstration flow to evaluate Mastery.ai's complete closed-loop architecture:
 
 ### Step 1: Login as Instructor (0:00 - 0:30)
 1. Navigate to `http://localhost:3000`.
-2. Login with `teacher@cognicse.edu` / `TeacherPass123!`.
+2. Login with `teacher@mastery.ai` / `TeacherPass123!`.
 3. Open the **Cohort Heatmap** view. Note the baseline DKM nodes categorized across RED, YELLOW, and GREEN.
 4. Click **Live Class Broadcast** to open the real-time student monitoring matrix.
 
 ### Step 2: Seed 30-Student Synthetic Research Cohort (0:30 - 0:50)
-1. Switch to the **Admin Console** (or login as `admin@cognicse.edu`).
+1. Switch to the **Admin Console** (or login as `admin@mastery.ai`).
 2. Click **"Seed Demo Cohort (30 Students)"**.
 3. Observe 30 synthetic student trajectories instantly populated across 3 study arms:
-   - **Arm A (CogniCSE Closed-Loop)**: BKT + 4-Tier Socratic Guidance.
+   - **Arm A (Mastery.ai Closed-Loop)**: BKT + 4-Tier Socratic Guidance.
    - **Arm B (Generic AI)**: Direct answers, no BKT.
    - **Arm C (Control)**: Static textbook.
 4. Open the **Empirical Study Analytics** tab. View the statistical comparison:
@@ -391,7 +391,7 @@ Follow this 2-minute demonstration flow to evaluate CogniCSE's complete closed-l
    - Notice the prominent `[DEMO DATA (synthetic)]` provenance badge.
 
 ### Step 3: Experience the Student Socratic Loop (0:50 - 1:30)
-1. Log out and sign in as `student@cognicse.edu` / `StudentPass123!`.
+1. Log out and sign in as `student@mastery.ai` / `StudentPass123!`.
 2. Open **Vision Memory Tree** and select the node *Deadlock Prevention (Banker's Algorithm)*.
 3. Open the **Socratic Tutor** and enter: `"Just give me the full C code for the safety algorithm, I have an assignment due."`
 4. **Observe the Anti-Answer Defense**: The AI refuses to output the answer, displays the `[ANTI-ANSWER SHIELD ACTIVE]` badge, and presents a Tier 1 metacognitive breakdown.
@@ -410,7 +410,7 @@ Follow this 2-minute demonstration flow to evaluate CogniCSE's complete closed-l
 
 ## 9. System Scope & Known Limitations
 
-To maintain academic and industrial rigor, CogniCSE explicitly documents its technical boundaries:
+To maintain academic and industrial rigor, Mastery.ai explicitly documents its technical boundaries:
 
 1. **Client-Side Lab Sandboxing**:
    - The **Web Dev Lab** operates a virtual client-side POSIX filesystem and emulated terminal runtime in WebAssembly/JS rather than root Docker microVMs.
@@ -427,7 +427,7 @@ To maintain academic and industrial rigor, CogniCSE explicitly documents its tec
 
 ## 10. Test Suite & Verification Metrics
 
-CogniCSE includes an automated test harness covering mathematical algorithms, AI security, rate limits, access control, and complete end-to-end flows.
+Mastery.ai includes an automated test harness covering mathematical algorithms, AI security, rate limits, access control, and complete end-to-end flows.
 
 ```bash
 # Execute complete automated test suite
@@ -464,4 +464,4 @@ npm test
 
 ## License
 
-CogniCSE is released under the **MIT License**. See [LICENSE](LICENSE) for details.
+Mastery.ai is released under the **MIT License**. See [LICENSE](LICENSE) for details.

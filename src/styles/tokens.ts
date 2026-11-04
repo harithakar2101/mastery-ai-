@@ -1,5 +1,5 @@
 /**
- * CogniCSE Design System Tokens
+ * Mastery.ai Design System Tokens
  * Unified design tokens for typography, elevation, spacing, radius, and themes
  * Complies with WCAG 2.2 AA contrast guidelines across light and dark modes
  */

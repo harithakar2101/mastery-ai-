@@ -153,7 +153,7 @@ authRouter.post('/logout', (_req: Request, res: Response) => {
 // Demo Mode: Sandboxed Demo Account Login
 authRouter.post('/demo-login', async (req: Request, res: Response) => {
   try {
-    const demoEmail = 'demo.student@cognicse.edu';
+    const demoEmail = 'demo.student@mastery.ai';
     let user = userRepository.findByEmail(demoEmail);
 
     if (!user) {
@@ -375,7 +375,7 @@ authRouter.get('/export-data', authenticate, (req: Request, res: Response) => {
     };
 
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="cognicse_user_${userId}_export.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="mastery-ai_user_${userId}_export.json"`);
     return res.json(exportPayload);
   } catch (err: any) {
     return sendError(res, 500, 'EXPORT_FAILED', err?.message || 'Failed to export data', req);

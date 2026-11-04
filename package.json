@@ -11,6 +11,7 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "test": "tsx --test tests/**/*.test.ts",
+    "test:e2e": "playwright test",
     "test:concurrency": "tsx scripts/simulateConcurrency.ts",
     "db:migrate-json": "tsx server/scripts/migrateFromStoreJson.ts",
     "db:backup": "tsx server/scripts/backupDatabase.ts"
@@ -40,6 +41,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/better-sqlite3": "^9.6.0",
     "@types/canvas-confetti": "^1.9.0",

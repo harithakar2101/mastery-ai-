@@ -29,8 +29,8 @@ export async function backupDatabase(targetDir?: string): Promise<{
   }
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const dbBackupPath = path.resolve(backupsDir, `cognicse_backup_${timestamp}.db`);
-  const jsonExportPath = path.resolve(backupsDir, `cognicse_export_${timestamp}.json`);
+  const dbBackupPath = path.resolve(backupsDir, `mastery-ai_backup_${timestamp}.db`);
+  const jsonExportPath = path.resolve(backupsDir, `mastery-ai_export_${timestamp}.json`);
 
   // 1. Online SQLite Backup
   if (dbPath !== ':memory:') {
@@ -63,7 +63,7 @@ export async function backupDatabase(targetDir?: string): Promise<{
 
   const existingFiles = fs.readdirSync(backupsDir);
   for (const file of existingFiles) {
-    if (file.startsWith('cognicse_backup_') || file.startsWith('cognicse_export_')) {
+    if (file.startsWith('mastery-ai_backup_') || file.startsWith('mastery-ai_export_')) {
       const fullPath = path.resolve(backupsDir, file);
       try {
         const stats = fs.statSync(fullPath);

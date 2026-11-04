@@ -165,7 +165,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             <span>•</span>
             <span>↵ Select</span>
           </div>
-          <span>CogniCSE Quick Command</span>
+          <span>Mastery.ai Quick Command</span>
         </div>
       </div>
     </div>

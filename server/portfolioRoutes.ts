@@ -434,11 +434,11 @@ portfolioRouter.get('/transcript.json', authenticate, (req: Request, res: Respon
         "https://www.w3.org/2018/credentials/v1",
         "https://purl.imsglobal.org/spec/ob/v3p0/context.json"
       ],
-      id: `urn:uuid:cognicse-transcript-${studentId}`,
-      type: ["VerifiableCredential", "CogniCSESkillsTranscript"],
+      id: `urn:uuid:mastery-ai-transcript-${studentId}`,
+      type: ["VerifiableCredential", "Mastery.aiSkillsTranscript"],
       issuer: {
-        id: "https://cognicse.edu/issuer",
-        name: "CogniCSE Autonomous Pedagogical Engine",
+        id: "https://mastery.ai/issuer",
+        name: "Mastery.ai Autonomous Pedagogical Engine",
         certificationAuthority: "Bayesian Knowledge Tracing Verification Authority"
       },
       issuanceDate: new Date().toISOString(),
@@ -464,7 +464,7 @@ portfolioRouter.get('/transcript.json', authenticate, (req: Request, res: Respon
       proof: {
         type: "Ed25519Signature2020",
         created: new Date().toISOString(),
-        verificationMethod: "https://cognicse.edu/keys/bkt-public-key.json",
+        verificationMethod: "https://mastery.ai/keys/bkt-public-key.json",
         proofPurpose: "assertionMethod",
         jws: `cogni_sig_${Buffer.from(`${studentId}:${user.overall_mastery}:${Date.now()}`).toString('base64url')}`
       }

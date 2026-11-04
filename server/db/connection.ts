@@ -13,7 +13,19 @@ export function getDbPath(): string {
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
-  return path.resolve(dataDir, 'cognicse.db');
+  const targetDb = path.resolve(dataDir, 'mastery.db');
+  const legacyDb = path.resolve(dataDir, 'cognicse.db');
+  if (!fs.existsSync(targetDb) && fs.existsSync(legacyDb)) {
+    fs.copyFileSync(legacyDb, targetDb);
+    try {
+      const db = new Database(targetDb);
+      db.prepare(`UPDATE users SET email = REPLACE(email, '@cognicse.edu', '@mastery.ai') WHERE email LIKE '%@cognicse.edu'`).run();
+      db.close();
+    } catch {
+      // ignore
+    }
+  }
+  return targetDb;
 }
 
 export function initDb(targetPath?: string): Database.Database {

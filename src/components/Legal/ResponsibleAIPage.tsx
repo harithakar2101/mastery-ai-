@@ -59,7 +59,7 @@ export const ResponsibleAIPage: React.FC<ResponsibleAIPageProps> = ({ onBack }) 
         <div className="bg-[#0b1320] border border-emerald-900/40 rounded-2xl p-6 shadow-xl space-y-5">
           <div className="flex items-center gap-2.5 text-emerald-400 pb-3 border-b border-[#152336]">
             <CheckCircle2 className="w-5 h-5 shrink-0" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-white">What CogniCSE AI Does</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-white">What Mastery.ai AI Does</h2>
           </div>
 
           <div className="space-y-4 text-xs text-slate-300">
@@ -109,7 +109,7 @@ export const ResponsibleAIPage: React.FC<ResponsibleAIPageProps> = ({ onBack }) 
         <div className="bg-[#0b1320] border border-rose-900/40 rounded-2xl p-6 shadow-xl space-y-5">
           <div className="flex items-center gap-2.5 text-rose-400 pb-3 border-b border-[#152336]">
             <XCircle className="w-5 h-5 shrink-0" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-white">What CogniCSE AI Never Does</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-white">What Mastery.ai AI Never Does</h2>
           </div>
 
           <div className="space-y-4 text-xs text-slate-300">
@@ -204,7 +204,7 @@ export const ResponsibleAIPage: React.FC<ResponsibleAIPageProps> = ({ onBack }) 
       {/* Footer Audit Details */}
       <div className="p-4 rounded-xl bg-[#070d17] border border-[#142336] flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-3">
         <div>
-          <span>Audited by CogniCSE Pedagogical Safety Team</span> &bull; <span>Nightly Adversarial Pass Rate: 100%</span>
+          <span>Audited by Mastery.ai Pedagogical Safety Team</span> &bull; <span>Nightly Adversarial Pass Rate: 100%</span>
         </div>
         <div className="font-mono text-[11px] text-slate-400">
           ISO/IEC 42001 & NIST AI RMF Compliant Architecture

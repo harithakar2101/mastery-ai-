@@ -169,7 +169,7 @@ export async function exportUserDataFromServer() {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `cognicse_user_export_${Date.now()}.json`;
+  a.download = `mastery_user_export_${Date.now()}.json`;
   document.body.appendChild(a);
   a.click();
   window.URL.revokeObjectURL(url);

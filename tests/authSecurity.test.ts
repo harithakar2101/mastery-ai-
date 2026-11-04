@@ -41,7 +41,7 @@ const teacherUser: StoreUser = {
 const adminUser: StoreUser = {
   id: 'ADMIN_001',
   name: 'System Admin',
-  email: 'admin@cognicse.edu',
+  email: 'admin@mastery.ai',
   role: 'admin',
   plan: 'Enterprise',
   tokenVersion: 1,

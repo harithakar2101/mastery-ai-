@@ -42,7 +42,7 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onBack }) 
                 <Badge variant="emerald" size="xs">FERPA & GDPR Aligned</Badge>
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
-                How CogniCSE protects learner identities, isolates sensor streams, and upholds self-service deletion rights.
+                How Mastery.ai protects learner identities, isolates sensor streams, and upholds self-service deletion rights.
               </p>
             </div>
           </div>

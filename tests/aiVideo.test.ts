@@ -15,7 +15,7 @@ let baseUrl: string;
 const studentUser = {
   id: 'VIDEO_TEST_STUDENT_1',
   name: 'Video Feature Tester',
-  email: 'video.tester@cognicse.edu',
+  email: 'video.tester@mastery.ai',
   role: 'student' as const,
   plan: 'Campus License',
   tokenVersion: 1,

@@ -1,7 +1,7 @@
 import { UserProfile, ChatSession } from '../types';
 
-export const STORAGE_KEY_ACTIVE_USER = 'cognicse_active_user_session';
-export const STORAGE_KEY_UI_THEME = 'cognicse_theme_preference';
+export const STORAGE_KEY_ACTIVE_USER = 'mastery_active_user_session';
+export const STORAGE_KEY_UI_THEME = 'mastery_theme_preference';
 
 export const INITIAL_PROFILE: UserProfile = {
   id: 'CSE_STU_8810',
@@ -27,13 +27,13 @@ export const DEFAULT_CHAT_SESSION: ChatSession = {
     {
       id: 'msg_welcome_1',
       sender: 'assistant',
-      text: 'Hello! I am CogniCSE, your 1-on-1 Socratic Engineering Tutor. What topic or challenge would you like to master today?',
+      text: 'Hello! I am Mastery.ai, your 1-on-1 Socratic Engineering Tutor. What topic or challenge would you like to master today?',
       timestamp: 'Just now',
     },
   ],
 };
 
-export function exportOfflinePackFile(content: any, filename = 'cognicse_offline_bundle.json') {
+export function exportOfflinePackFile(content: any, filename = 'mastery_offline_bundle.json') {
   const blob = new Blob([JSON.stringify(content, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');

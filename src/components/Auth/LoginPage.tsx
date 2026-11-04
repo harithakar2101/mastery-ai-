@@ -69,7 +69,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
         });
       } else {
         await loginWithServer({
-          email: 'admin@cognicse.edu',
+          email: 'admin@mastery.ai',
           password: 'Password123!',
         });
       }
@@ -92,7 +92,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
           <Brain className="w-8 h-8 text-white" />
         </div>
         <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center justify-center gap-2">
-          <span>CogniCSE</span>
+          <span>Mastery.ai</span>
           <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-400 border border-indigo-700 font-mono">Matrix</span>
         </h1>
         <p className="text-sm text-slate-400 mt-1">Production-Grade Socratic CSE Tutoring Platform</p>

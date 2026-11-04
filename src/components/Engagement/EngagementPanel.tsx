@@ -134,7 +134,7 @@ export const EngagementPanel: React.FC = () => {
           nudgeMessage: 'You stepped away from the tab. Are you still with us?',
         }));
       } else {
-        addEvent('TAB_VISIBLE', 'REAL SENSOR', 'Student returned to CogniCSE workspace.');
+        addEvent('TAB_VISIBLE', 'REAL SENSOR', 'Student returned to Mastery.ai workspace.');
       }
     };
 

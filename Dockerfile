@@ -1,5 +1,5 @@
 # ==============================================================================
-# Multi-stage Dockerfile for CogniCSE Autonomous Pedagogical Engine
+# Multi-stage Dockerfile for Mastery.ai Autonomous Pedagogical Engine
 # Cloud Run & Production Containerization
 # ==============================================================================
 
@@ -58,5 +58,5 @@ EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:${PORT:-3000}/healthz || exit 1
 
-# Start CogniCSE Pedagogical Server
+# Start Mastery.ai Pedagogical Server
 CMD ["npx", "tsx", "server.ts"]

@@ -1,4 +1,4 @@
-name: CogniCSE CI Pipeline
+name: Mastery.ai CI Pipeline
 
 on:
   push:
@@ -48,6 +48,12 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright End-to-End Persona Tests
+        run: npm run test:e2e
 
       - name: Verify Health Probes
         run: |

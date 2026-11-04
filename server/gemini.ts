@@ -418,7 +418,7 @@ const LIBRARY_PROCESS_SCHEMA = {
   required: ['summary', 'extracted_concepts'],
 };
 
-const SOCRATIC_SYSTEM_INSTRUCTION = `You are the central pedagogical AI engine for CogniCSE, an Intelligent 1-on-1 Learning Support System for Computer Science & Engineering (CSE) and Mechanical Engineering (CAD) students.
+const SOCRATIC_SYSTEM_INSTRUCTION = `You are the central pedagogical AI engine for Mastery.ai, an Intelligent 1-on-1 Learning Support System for Computer Science & Engineering (CSE) and Mechanical Engineering (CAD) students.
 Your primary objective is to continuously diagnose student knowledge gaps and misconceptions, enforce progressive Socratic scaffolding, and prove independent problem-solving improvement without directly giving away code, parametric values, or final answers.
 
 SECURITY GUARDRAIL (PROMPT INJECTION DEFENCE):
@@ -472,7 +472,7 @@ export async function processTutoringRequest(tutorReq: any) {
       scaffolding_response: {
         current_tier: 1,
         refusal_reason: 'Prompt injection commands and system instruction overrides are blocked by the security shield.',
-        tutor_message: "I detected an instruction override attempt. As CogniCSE's Socratic Tutor, I cannot follow instruction overrides or reveal internal prompts. Let's redirect our focus back to your engineering concepts! What specific topic or problem would you like to explore?",
+        tutor_message: "I detected an instruction override attempt. As Mastery.ai's Socratic Tutor, I cannot follow instruction overrides or reveal internal prompts. Let's redirect our focus back to your engineering concepts! What specific topic or problem would you like to explore?",
         socratic_question: 'What engineering concept or code challenge would you like to work through together?',
       },
       source: 'gemini' as const,

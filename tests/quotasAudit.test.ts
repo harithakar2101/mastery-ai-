@@ -74,7 +74,7 @@ describe('AI Quotas, PII Redaction & Audit Logging Suite', () => {
     const sensitivePayload = {
       userEmail: 'student.smith@university.edu',
       password: 'SuperSecretPassword123!',
-      sessionCookie: 'cognicse_session=eyJhbGciOiJIUzI1NiJ9.test',
+      sessionCookie: 'mastery_session=eyJhbGciOiJIUzI1NiJ9.test',
       apiKey: 'AIzaSyD-1234567890abcdefghijklmnopqrstuv',
       unrelatedField: 'Calculus III Matrix Operations',
     };

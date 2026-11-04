@@ -1,16 +1,16 @@
 services:
-  cognicse-engine:
+  mastery-engine:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: cognicse_pedagogical_engine
+    container_name: mastery_pedagogical_engine
     restart: unless-stopped
     ports:
       - "${PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - JWT_SECRET=${JWT_SECRET:-cognicse_prod_jwt_secret_key_minimum_32_characters_hmac}
+      - JWT_SECRET=${JWT_SECRET:-mastery-ai_prod_jwt_secret_key_minimum_32_characters_hmac}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
       - GEMINI_TTS_MODEL=${GEMINI_TTS_MODEL:-gemini-2.0-flash}

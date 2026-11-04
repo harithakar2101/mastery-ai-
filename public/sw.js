@@ -1,9 +1,9 @@
 /**
- * CogniCSE Service Worker
+ * Mastery.ai Service Worker
  * Caches static shell assets and offline flashcard review queues
  */
 
-const CACHE_NAME = 'cognicse-v1';
+const CACHE_NAME = 'mastery-v1';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

@@ -3,8 +3,8 @@ import bcrypt from 'bcryptjs';
 import { type Request, type Response, type NextFunction } from 'express';
 import { readStore, writeStoreAtomically, type StoreUser, type UserRole } from './store.ts';
 
-const SESSION_SECRET = process.env.SESSION_SECRET || 'cognicse_secure_session_signing_secret_key_2026';
-export const COOKIE_NAME = 'cognicse_session';
+const SESSION_SECRET = process.env.SESSION_SECRET || 'mastery-ai_secure_session_signing_secret_key_2026';
+export const COOKIE_NAME = 'mastery_session';
 export const TEACHER_INVITE_CODE = process.env.TEACHER_INVITE_CODE || 'TEACHER_INVITE_2026';
 
 export interface TokenPayload {

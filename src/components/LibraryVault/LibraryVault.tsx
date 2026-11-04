@@ -194,7 +194,7 @@ ${extractedData?.summary || 'Comprehensive reference for CSE students.'}
 ${(extractedData?.extracted_concepts || []).map((c: any) => `- **${c.name}** (${c.difficulty}): ${c.frequent_misconception}`).join('\n')}
 
 ---
-Exported from CogniCSE Library Vault for offline revision.`;
+Exported from Mastery.ai Library Vault for offline revision.`;
 
     const blob = new Blob([offlinePack], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);

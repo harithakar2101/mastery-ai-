@@ -1,5 +1,5 @@
 /**
- * Multilingual internationalization dictionary for CogniCSE.
+ * Multilingual internationalization dictionary for Mastery.ai.
  * Supports English ('en'), Tamil ('ta'), and Hindi ('hi').
  * Technical terms and code identifiers are always preserved in English.
  */

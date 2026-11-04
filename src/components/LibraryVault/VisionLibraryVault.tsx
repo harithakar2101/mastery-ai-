@@ -189,7 +189,7 @@ export const VisionLibraryVault: React.FC = () => {
 
         <div className="flex items-center gap-2.5">
           <button
-            onClick={() => alert("Connecting to CogniCSE Peer Study Community & Discord...")}
+            onClick={() => alert("Connecting to Mastery.ai Peer Study Community & Discord...")}
             className="px-3.5 py-2 rounded-xl bg-[#111b2b] hover:bg-[#162235] text-slate-200 text-xs font-medium border border-[#1e2f47] flex items-center gap-2 cursor-pointer transition-colors"
           >
             <MessageSquare className="w-4 h-4 text-indigo-400" />

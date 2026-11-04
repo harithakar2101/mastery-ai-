@@ -154,7 +154,7 @@ export const CodeSandbox: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-2 flex-wrap">
             <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800/60 uppercase tracking-wider">
-              CogniCSE Polyglot Sandbox
+              Mastery.ai Polyglot Sandbox
             </span>
             <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono">
               {currentLangConfig.name} ({currentLangConfig.version})
@@ -375,7 +375,7 @@ export const CodeSandbox: React.FC = () => {
               <div className="flex items-center gap-2 flex-wrap">
                 <Sparkles className="w-4 h-4 text-blue-400" />
                 <span className="text-xs font-bold text-white uppercase tracking-wider">
-                  CogniCSE Socratic Engine
+                  Mastery.ai Socratic Engine
                 </span>
                 {tutoringResponse?.source === 'gemini' ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-[10px] font-mono font-bold">
@@ -416,7 +416,7 @@ export const CodeSandbox: React.FC = () => {
                 <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold">Anti-Answer Protocol Active: </span>
-                  Direct solution generation was deflected. To build lifelong engineering competence, CogniCSE guides you through structured Socratic inquiry!
+                  Direct solution generation was deflected. To build lifelong engineering competence, Mastery.ai guides you through structured Socratic inquiry!
                 </div>
               </div>
             )}
@@ -503,7 +503,7 @@ export const CodeSandbox: React.FC = () => {
                 value={studentInput}
                 onChange={e => setStudentInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSendPrompt()}
-                placeholder="Ask CogniCSE for guidance or conceptual clarification..."
+                placeholder="Ask Mastery.ai for guidance or conceptual clarification..."
                 className="bg-[#070d18] border border-[#1a273b] rounded-xl px-3.5 py-2 text-xs text-white flex-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
               <button

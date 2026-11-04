@@ -78,7 +78,7 @@ export const PublicPortfolioPage: React.FC<{ slug: string }> = ({ slug }) => {
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Go to CogniCSE Platform</span>
+            <span>Go to Mastery.ai Platform</span>
           </a>
         </div>
       </div>
@@ -94,7 +94,7 @@ export const PublicPortfolioPage: React.FC<{ slug: string }> = ({ slug }) => {
         <div className="flex items-center justify-between text-xs text-slate-400 pb-3 border-b border-[#17253b]">
           <div className="flex items-center gap-2 font-bold text-slate-200">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>CogniCSE Verified Academic Credentials</span>
+            <span>Mastery.ai Verified Academic Credentials</span>
           </div>
           <button
             onClick={() => window.print()}
@@ -235,7 +235,7 @@ export const PublicPortfolioPage: React.FC<{ slug: string }> = ({ slug }) => {
 
         {/* Footer */}
         <div className="pt-8 border-t border-[#17253b] text-center text-xs text-slate-500 space-y-1">
-          <p>CogniCSE Pedagogical Engine • Verified Learner Portfolio</p>
+          <p>Mastery.ai Pedagogical Engine • Verified Learner Portfolio</p>
           <p className="text-[11px]">Private student information is strictly excluded from public indexes.</p>
         </div>
       </div>
@@ -252,7 +252,7 @@ export const PublicPortfolioPage: React.FC<{ slug: string }> = ({ slug }) => {
               <span className="font-mono text-blue-400 uppercase text-[10px]">{selectedEvidence.track}</span>
               <h4 className="text-sm font-bold text-slate-100">{selectedEvidence.name}</h4>
               <p className="text-slate-400">
-                CogniCSE Bayesian posterior mastery: <strong className="text-emerald-400 font-mono">{selectedEvidence.masteryLevel}%</strong>
+                Mastery.ai Bayesian posterior mastery: <strong className="text-emerald-400 font-mono">{selectedEvidence.masteryLevel}%</strong>
               </p>
             </div>
             <div className="p-3 bg-emerald-950/30 border border-emerald-800/60 rounded-xl text-emerald-300">

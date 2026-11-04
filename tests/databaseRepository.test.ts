@@ -25,7 +25,7 @@ let baseUrl: string;
 const adminUser = {
   id: 'ADMIN_REPO_TEST',
   name: 'Admin Tester',
-  email: 'admin.repo@cognicse.edu',
+  email: 'admin.repo@mastery.ai',
   role: 'admin' as const,
   plan: 'Enterprise',
   tokenVersion: 1,
@@ -34,7 +34,7 @@ const adminUser = {
 const studentUser = {
   id: 'STU_REPO_TEST_1',
   name: 'Student Tester 1',
-  email: 'stu1.repo@cognicse.edu',
+  email: 'stu1.repo@mastery.ai',
   role: 'student' as const,
   plan: 'Free Plan',
   tokenVersion: 1,

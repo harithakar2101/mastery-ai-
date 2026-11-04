@@ -398,7 +398,7 @@ The JavaScript runtime uses an event loop with strict microtask queue prioritiza
             <span>AI Exam Preparation & Psychometric Mastery</span>
           </div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight mb-2">
-            CogniCSE Study Studio
+            Mastery.ai Study Studio
           </h1>
           <p className="text-slate-400 text-sm max-w-xl mx-auto">
             Design an adaptive, BKT-weighted exam preparation curriculum. Upload your syllabus or lecture notes to automatically generate hierarchical summaries, spaced flashcards, and a day-by-day plan.

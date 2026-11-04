@@ -363,7 +363,7 @@ app.get('/p/:slug', (req: Request, res: Response, next: NextFunction) => {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>404 - Portfolio Private or Not Found | CogniCSE</title>
+  <title>404 - Portfolio Private or Not Found | Mastery.ai</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body { background-color: #060b13; color: #94a3b8; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 1.5rem; box-sizing: border-box; }
@@ -378,7 +378,7 @@ app.get('/p/:slug', (req: Request, res: Response, next: NextFunction) => {
   <div class="card">
     <h1>404 • Portfolio Private or Expired</h1>
     <p>This learner portfolio is currently set to private, the link has been revoked by the student, or it does not exist.</p>
-    <a href="/">Return to CogniCSE</a>
+    <a href="/">Return to Mastery.ai</a>
   </div>
 </body>
 </html>`);
@@ -984,14 +984,14 @@ export async function startServer() {
 
   if (process.env.NODE_ENV !== 'test') {
     const srv = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`CogniCSE Pedagogical Engine server running on port ${PORT}`);
+      console.log(`Mastery.ai Pedagogical Engine server running on port ${PORT}`);
     });
     srv.on('error', (err: any) => {
       if (err.code === 'EADDRINUSE') {
         const altPort = PORT + 1;
         console.warn(`[PORT CONFLICT] Port ${PORT} is busy, failing over to port ${altPort}`);
         app.listen(altPort, '0.0.0.0', () => {
-          console.log(`CogniCSE Pedagogical Engine server running on port ${altPort}`);
+          console.log(`Mastery.ai Pedagogical Engine server running on port ${altPort}`);
         });
       } else {
         console.error('Server listen error:', err);

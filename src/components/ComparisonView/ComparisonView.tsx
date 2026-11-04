@@ -170,7 +170,7 @@ export const ComparisonView: React.FC = () => {
             )}
           </div>
           <h1 className="text-2xl font-bold text-slate-100">
-            Generic Assistance vs. CogniCSE Socratic Scaffolding
+            Generic Assistance vs. Mastery.ai Socratic Scaffolding
           </h1>
           <p className="text-xs text-slate-400 mt-1 max-w-2xl">
             Controlled empirical study module with concept-matched item banks, longitudinal pre/post/retention metrics, and hypothesis testing with Welch & paired t-tests.
@@ -323,12 +323,12 @@ $pdo = new PDO('mysql:host=localhost;port=3306;dbname=test', 'root', '');
             </div>
           </div>
 
-          {/* RIGHT: COGNICSE SOCRATIC SCAFFOLDING */}
+          {/* RIGHT: MASTERY.AI SOCRATIC SCAFFOLDING */}
           <div className="bg-slate-900 border border-indigo-700/60 rounded-2xl p-6 shadow-md space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-800">
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-emerald-400" />
-                <h2 className="text-base font-bold text-slate-100">Arm A: CogniCSE Socratic Closed-Loop</h2>
+                <h2 className="text-base font-bold text-slate-100">Arm A: Mastery.ai Socratic Closed-Loop</h2>
               </div>
               <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">
                 Anti-Answer Scaffolding
@@ -337,7 +337,7 @@ $pdo = new PDO('mysql:host=localhost;port=3306;dbname=test', 'root', '');
 
             <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 font-mono text-xs text-slate-300 space-y-1">
               <span className="text-slate-500 block">Student prompt: "Fix my code, what is the error?"</span>
-              <span className="text-indigo-400 block font-semibold">CogniCSE Socratic Response (Tier 1):</span>
+              <span className="text-indigo-400 block font-semibold">Mastery.ai Socratic Response (Tier 1):</span>
               <div className="text-slate-200 text-[11px] mt-1 bg-slate-900 p-2.5 rounded-lg border border-slate-800 space-y-1">
                 <p className="text-amber-300 font-semibold">Diagnostic Socratic Question:</p>
                 <p>"Check your connection string: which transport layer port does MySQL listen on by default, and how does that differ from HTTP port 80?"</p>

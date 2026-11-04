@@ -1,5 +1,5 @@
 /**
- * CogniCSE Prompt Security & Injection Defence
+ * Mastery.ai Prompt Security & Injection Defence
  * Delimits untrusted user inputs, detects adversarial jailbreak attempts,
  * and preserves epistemological guardrails.
  */

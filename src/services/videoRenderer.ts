@@ -157,7 +157,7 @@ export function drawVideoFrame(
 
   ctx.font = 'bold 13px ui-monospace, SFMono-Regular, Menlo, monospace';
   ctx.fillStyle = '#38bdf8';
-  ctx.fillText('COGNICSE AI', 62, 28);
+  ctx.fillText('MASTERY.AI', 62, 28);
 
   ctx.font = '11px ui-monospace, SFMono-Regular, Menlo, monospace';
   ctx.fillStyle = '#94a3b8';

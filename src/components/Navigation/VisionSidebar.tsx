@@ -137,7 +137,7 @@ export const VisionSidebar: React.FC<VisionSidebarProps> = ({
             {!isCollapsed && (
               <div>
                 <div className="font-extrabold text-sm text-white tracking-tight flex items-center gap-1.5">
-                  <span>CogniCSE</span>
+                  <span>Mastery.ai</span>
                   <span className="text-[9px] px-1.5 py-0.2 bg-blue-950 text-blue-400 border border-blue-800 rounded font-mono">
                     PRO
                   </span>

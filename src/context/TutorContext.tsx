@@ -81,13 +81,13 @@ export const TutorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Multilingual UI & Tutor Language (English, Tamil, Hindi)
   const [uiLanguage, setUiLanguageState] = useState<'en' | 'ta' | 'hi'>(() => {
-    const saved = localStorage.getItem('cognicse_ui_lang');
+    const saved = localStorage.getItem('mastery_ui_lang');
     return (saved === 'ta' || saved === 'hi' || saved === 'en') ? saved : 'en';
   });
 
   const setUiLanguage = (lang: 'en' | 'ta' | 'hi') => {
     setUiLanguageState(lang);
-    localStorage.setItem('cognicse_ui_lang', lang);
+    localStorage.setItem('mastery_ui_lang', lang);
   };
 
   const openWhyScoreDrawer = (node?: DKMNode) => {

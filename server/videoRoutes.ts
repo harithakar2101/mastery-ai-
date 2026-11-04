@@ -209,7 +209,7 @@ export function registerVideoRoutes(app: Express) {
         if (j) {
           j.progressPercent = 100;
           j.status = 'COMPLETED';
-          j.videoUrl = `https://storage.googleapis.com/cognicse-demo/cinematic/${jobId}.mp4`;
+          j.videoUrl = `https://storage.googleapis.com/mastery-ai-demo/cinematic/${jobId}.mp4`;
         }
       }, 3500);
 

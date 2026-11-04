@@ -37,7 +37,7 @@ export function validateEnvironment() {
 
   if (errors.length > 0) {
     console.error('================================================================');
-    console.error('FATAL: CogniCSE Environment Configuration Validation Failed');
+    console.error('FATAL: Mastery.ai Environment Configuration Validation Failed');
     console.error('================================================================');
     errors.forEach(err => console.error(` ✖ ${err}`));
     console.error('================================================================');

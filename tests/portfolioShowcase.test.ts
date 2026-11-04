@@ -195,7 +195,7 @@ describe('Learner Portfolio & Public Showcase Acceptance Suite', () => {
 
     const transcript = await res.json();
     assert.ok(transcript.type.includes('VerifiableCredential'));
-    assert.equal(transcript.issuer.name, 'CogniCSE Autonomous Pedagogical Engine');
+    assert.equal(transcript.issuer.name, 'Mastery.ai Autonomous Pedagogical Engine');
     assert.equal(transcript.credentialSubject.name, 'Marcus Vance');
     assert.ok(transcript.proof);
     assert.ok(transcript.proof.jws.startsWith('cogni_sig_'));

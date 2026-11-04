@@ -1,5 +1,5 @@
 /**
- * CogniCSE Structured Logger with PII Redaction
+ * Mastery.ai Structured Logger with PII Redaction
  * Standardized JSON logging with Request ID correlation and privacy sanitization
  */
 
@@ -17,7 +17,7 @@ const CURRENT_LEVEL: LogLevel = (process.env.LOG_LEVEL as LogLevel) || 'info';
 
 // PII Redaction Patterns
 const EMAIL_REGEX = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
-const TOKEN_REGEX = /(Bearer\s+[A-Za-z0-9\-._~+/]+=*)|(session_token=[^;\s]+)|(cognicse_session=[^;\s]+)/gi;
+const TOKEN_REGEX = /(Bearer\s+[A-Za-z0-9\-._~+/]+=*)|(session_token=[^;\s]+)|(mastery_session=[^;\s]+)/gi;
 const PASSWORD_REGEX = /("password"\s*:\s*)"[^"]+"/gi;
 const API_KEY_REGEX = /(AIza[0-9A-Za-z-_]{35})|(key-[0-9a-zA-Z]{32})/g;
 
@@ -86,7 +86,7 @@ export class StructuredLogger {
     const merged = {
       level,
       time: new Date().toISOString(),
-      service: 'cognicse-engine',
+      service: 'mastery-engine',
       pid: process.pid,
       ...this.baseContext,
       ...payload,
