@@ -35,6 +35,7 @@ export async function syncUserStateToServer(params: {
 }
 
 export async function recordPedagogicalEvent(event: {
+  studentId?: string;
   type: string;
   conceptId?: string;
   topicId?: string;

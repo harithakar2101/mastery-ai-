@@ -18,6 +18,7 @@ import {
   Layers,
   ChevronRight,
   TrendingUp,
+  AlertTriangle,
 } from 'lucide-react';
 import { Badge } from '../UI/Badge';
 import { Button } from '../UI/Button';
@@ -82,6 +83,22 @@ export const AdminConsoleView: React.FC = () => {
 
   // Quotas & Usage state
   const [usageSummary, setUsageSummary] = useState<AIUsageSummary | null>(null);
+  const [aiStatus, setAiStatus] = useState<{
+    keyConfigured: boolean;
+    model: string;
+    ttsModel: string;
+    videoModel: string | null;
+    lastSuccess: string | null;
+    lastErrorMessage: string | null;
+    circuitBreakerState: string;
+  } | null>(null);
+  const [isTestingAi, setIsTestingAi] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState<{
+    success: boolean;
+    latencyMs: number;
+    model: string;
+    error?: string;
+  } | null>(null);
 
   // Audit Logs state
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
@@ -109,12 +126,14 @@ export const AdminConsoleView: React.FC = () => {
       fetch('/api/admin/anti-answer-stats', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
       fetch('/api/admin/ai-usage', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
       fetch('/api/admin/audit-logs?limit=50', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
+      fetch('/api/ai/status', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
     ])
-      .then(([stats, usage, logs]) => {
+      .then(([stats, usage, logs, ai]) => {
         if (!isMounted) return;
         if (stats) setAntiAnswerStats(stats);
         if (usage) setUsageSummary(usage);
         if (logs?.logs) setAuditLogs(logs.logs);
+        if (ai) setAiStatus(ai);
       })
       .catch(err => {
         console.warn('Failed to load admin console data:', err);
@@ -227,6 +246,31 @@ export const AdminConsoleView: React.FC = () => {
     }
   };
 
+  const handleTestAi = async () => {
+    setIsTestingAi(true);
+    setAiTestResult(null);
+    try {
+      const res = await fetch('/api/ai/test', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      setAiTestResult(data);
+      fetch('/api/ai/status', { credentials: 'include' })
+        .then(r => r.ok ? r.json() : null)
+        .then(s => s && setAiStatus(s));
+    } catch (err: any) {
+      setAiTestResult({
+        success: false,
+        latencyMs: 0,
+        model: aiStatus?.model || 'gemini-2.5-flash',
+        error: err?.message || 'Network communication error',
+      });
+    } finally {
+      setIsTestingAi(false);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       {/* Top Banner */}
@@ -238,7 +282,7 @@ export const AdminConsoleView: React.FC = () => {
           <div>
             <h1 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
               <span>Institution Administration Console</span>
-              <Badge variant="amber" size="xs">Admin Role Active</Badge>
+              <Badge variant="warning" size="xs">Admin Role Active</Badge>
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
               Live monitoring of Anti-Answer compliance, per-user AI quotas, estimated costs, and immutable audit logs.
@@ -468,6 +512,81 @@ export const AdminConsoleView: React.FC = () => {
                 ${usageSummary?.allTime?.estimatedCostUsd ?? '0.00'}
               </div>
               <div className="text-[10px] text-slate-500 font-mono">Gemini 2.5 Flash @ $0.25/1M</div>
+            </div>
+          </div>
+
+          {/* AI Connection & Model Health Card */}
+          <div className="p-5 rounded-2xl bg-[#0b1320] border border-[#16253c] space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#142336]">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                    Gemini AI Gateway Diagnostics
+                  </h3>
+                  {aiStatus?.keyConfigured ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      LIVE AI CONNECTED
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-950 text-amber-300 border border-amber-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                      LOCAL SOCRATIC FALLBACK
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  Active Model: <span className="text-blue-300 font-mono">{aiStatus?.model || 'gemini-2.5-flash'}</span> • Circuit Breaker: <span className="font-mono text-slate-200">{aiStatus?.circuitBreakerState || 'CLOSED'}</span>
+                </p>
+              </div>
+
+              <button
+                onClick={handleTestAi}
+                disabled={isTestingAi}
+                className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center gap-2 transition-all cursor-pointer shadow-md shadow-blue-600/30 shrink-0"
+              >
+                <Activity className={`w-3.5 h-3.5 ${isTestingAi ? 'animate-spin' : ''}`} />
+                <span>{isTestingAi ? 'Testing Connection...' : 'Test AI Connection'}</span>
+              </button>
+            </div>
+
+            {aiTestResult && (
+              <div
+                className={`p-3.5 rounded-xl border text-xs flex items-start gap-2.5 ${
+                  aiTestResult.success
+                    ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-200'
+                    : 'bg-rose-950/40 border-rose-800/60 text-rose-200'
+                }`}
+              >
+                {aiTestResult.success ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                ) : (
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                )}
+                <div className="space-y-0.5 flex-1">
+                  <div className="font-semibold">
+                    {aiTestResult.success
+                      ? `Gemini Connection Verified Successfully (${aiTestResult.latencyMs}ms)`
+                      : 'AI Gateway Test Failed'}
+                  </div>
+                  <div className="text-[11px] opacity-80 font-mono">
+                    {aiTestResult.success
+                      ? `Model "${aiTestResult.model}" responded normally. Live AI is active.`
+                      : aiTestResult.error}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+              <div className="p-3 bg-[#070c14] rounded-xl border border-[#142336] space-y-1">
+                <span className="text-slate-500 text-[10px] uppercase">Last External Success</span>
+                <div className="text-slate-200 truncate">{aiStatus?.lastSuccess || 'None recorded yet this session'}</div>
+              </div>
+              <div className="p-3 bg-[#070c14] rounded-xl border border-[#142336] space-y-1">
+                <span className="text-slate-500 text-[10px] uppercase">Last Diagnostic Notice</span>
+                <div className="text-slate-200 truncate">{aiStatus?.lastErrorMessage || 'All system health checks green'}</div>
+              </div>
             </div>
           </div>
 

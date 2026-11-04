@@ -97,7 +97,7 @@ describe('Acceptance Criteria: 50 Simulated Concurrent Students Suite', () => {
     // 3. Verify in repository
     let foundInDb = 0;
     for (const student of students) {
-      const count = eventRepository.listByStudentPaginated(student.id).totalCount;
+      const count = eventRepository.listByStudentPaginated(student.id).totalCount ?? 0;
       assert.equal(count, eventsPerStudent);
       foundInDb += count;
     }
@@ -110,7 +110,7 @@ describe('Acceptance Criteria: 50 Simulated Concurrent Students Suite', () => {
     // Verify after restart
     let foundAfterRestart = 0;
     for (const student of students) {
-      const count = eventRepository.listByStudentPaginated(student.id).totalCount;
+      const count = eventRepository.listByStudentPaginated(student.id).totalCount ?? 0;
       foundAfterRestart += count;
     }
     assert.equal(foundAfterRestart, totalExpected);

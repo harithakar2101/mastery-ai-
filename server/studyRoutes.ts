@@ -311,12 +311,17 @@ Return valid JSON with an array named "items" containing objects with:
         islmRepository.upsert({
           student_id: islm.student_id,
           name: islm.name,
+          email: islm.email || `${islm.student_id.toLowerCase()}@synthetic.edu`,
+          role: 'student',
+          course_track: islm.course_track || 'Web Application Development',
           overall_mastery: islm.overall_mastery,
           topic_mastery: islm.topic_mastery,
-          misconceptions: islm.misconceptions,
-          retention_strength: islm.retention_strength,
-          p_slip: islm.p_slip,
-          p_guess: islm.p_guess,
+          recent_misconceptions: (islm as any).recent_misconceptions || (islm as any).misconceptions || [],
+          scaffolding_tier_required: (islm as any).scaffolding_tier_required ?? 1,
+          error_count: (islm as any).error_count ?? 0,
+          independent_solves: (islm as any).independent_solves ?? 0,
+          scaffolding_fading_index: (islm as any).scaffolding_fading_index ?? (islm as any).retention_strength ?? 0.5,
+          time_spent_mins: (islm as any).time_spent_mins ?? 60,
           synthetic: true,
         });
       });

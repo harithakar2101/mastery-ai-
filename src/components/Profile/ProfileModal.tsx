@@ -42,8 +42,12 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
   const [email, setEmail] = useState(userProfile.email);
   const [degree, setDegree] = useState(userProfile.degree || 'B.Tech in Computer Science & Engineering');
   const [targetMajor, setTargetMajor] = useState(userProfile.targetMajor || 'Systems & Artificial Intelligence');
-  const [preferredLanguages, setPreferredLanguages] = useState<SupportedLanguage[]>(userProfile.preferredLanguages);
-  const [theme, setTheme] = useState<'dark' | 'light'>(userProfile.theme);
+  const [preferredLanguages, setPreferredLanguages] = useState<SupportedLanguage[]>(
+    (userProfile.preferredLanguages as SupportedLanguage[]) || ['python', 'javascript']
+  );
+  const [theme, setTheme] = useState<'dark' | 'light'>(
+    userProfile.theme === 'light' ? 'light' : 'dark'
+  );
   const [retentionDays, setRetentionDays] = useState<number>(userProfile.retentionDays || 180);
   const [isUpdatingRetention, setIsUpdatingRetention] = useState(false);
 

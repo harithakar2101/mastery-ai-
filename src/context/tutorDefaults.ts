@@ -5,11 +5,11 @@ export const STORAGE_KEY_UI_THEME = 'mastery_theme_preference';
 
 export const INITIAL_PROFILE: UserProfile = {
   id: 'CSE_STU_8810',
-  name: 'Haritha Karthikkumar',
-  email: 'haritha.k@university.edu',
+  name: 'Alex Rivera',
+  email: 'alex.rivera@university.edu',
   role: 'student',
+  course: 'Computer Science',
   degree: 'B.Tech in Computer Science & Engineering',
-  plan: 'Free Plan',
   streakDays: 7,
   testsCompleted: 3,
   overallMastery: 0.60,

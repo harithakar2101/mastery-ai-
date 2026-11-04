@@ -2,6 +2,26 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 
+export function verifySqliteDriver(): void {
+  try {
+    const testDb = new Database(':memory:');
+    testDb.prepare('SELECT 1 as ok').get();
+    testDb.close();
+  } catch (err: any) {
+    console.error('\n===============================================================');
+    console.error('FATAL: Failed to initialize better-sqlite3 database engine.');
+    console.error('Reason:', err?.message || err);
+    console.error('NOTE: SQLite requires persistent storage (e.g. persistent volume)');
+    console.error('in ephemeral container environments (Docker, Render, Fly.io, etc.).');
+    console.error('Ephemeral disk writes to ./data/mastery.db will not persist across deploys.');
+    console.error('===============================================================\n');
+    process.exit(1);
+  }
+}
+
+// Run verification on module load
+verifySqliteDriver();
+
 let dbInstance: Database.Database | null = null;
 let currentDbPath: string | null = null;
 

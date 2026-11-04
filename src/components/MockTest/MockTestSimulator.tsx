@@ -80,7 +80,7 @@ export const MockTestSimulator: React.FC = () => {
     let correctCount = 0;
     let wrongCount = 0;
 
-    testData.questions.forEach((q, idx) => {
+    testData.questions.forEach((q: MockTestQuestion, idx: number) => {
       const userAns = selectedAnswers[idx];
       if (userAns !== undefined) {
         const isCorrect = userAns === q.correct_option_index;
@@ -91,7 +91,7 @@ export const MockTestSimulator: React.FC = () => {
         }
         // Bayesian Knowledge Tracing update per question
         recordObservation({
-          conceptId: q.topic_id,
+          conceptId: q.topic_id || q.conceptId || q.id,
           isCorrect,
           isIndependent: true,
           source: 'mock-test',
@@ -100,7 +100,7 @@ export const MockTestSimulator: React.FC = () => {
       }
     });
 
-    const netScore = Math.max(0, +(correctCount - wrongCount * testData.negative_marking_rate).toFixed(2));
+    const netScore = Math.max(0, +(correctCount - wrongCount * (testData.negative_marking_rate || 0.25)).toFixed(2));
     if (netScore >= 3.5) {
       confetti({ particleCount: 70, spread: 70, origin: { y: 0.6 } });
     }
@@ -125,7 +125,7 @@ export const MockTestSimulator: React.FC = () => {
   let wrongTotal = 0;
   let unattemptedTotal = 0;
 
-  testData.questions.forEach((q, idx) => {
+  testData.questions.forEach((q: MockTestQuestion, idx: number) => {
     if (selectedAnswers[idx] === undefined) {
       unattemptedTotal++;
     } else if (selectedAnswers[idx] === q.correct_option_index) {
@@ -135,7 +135,7 @@ export const MockTestSimulator: React.FC = () => {
     }
   });
 
-  const finalScore = +(correctTotal - wrongTotal * testData.negative_marking_rate).toFixed(2);
+  const finalScore = +(correctTotal - wrongTotal * (testData.negative_marking_rate || 0.25)).toFixed(2);
   const accuracyPct = (testData.questions.length - unattemptedTotal) > 0
     ? Math.round((correctTotal / (testData.questions.length - unattemptedTotal)) * 100)
     : 0;
@@ -155,7 +155,7 @@ export const MockTestSimulator: React.FC = () => {
           </div>
           <h1 className="text-xl font-bold text-slate-100">{testData.title}</h1>
           <p className="text-xs text-slate-400 mt-1">
-            Negative Marking: -{testData.negative_marking_rate} per wrong answer. Time Limit: {testData.time_limit_mins} mins.
+            Negative Marking: -{testData.negative_marking_rate || 0.25} per wrong answer. Time Limit: {testData.time_limit_mins || 15} mins.
           </p>
         </div>
 
@@ -310,13 +310,13 @@ export const MockTestSimulator: React.FC = () => {
                   MOCK_TEST_AI_REVIEW: Side-by-Side Option Analysis
                 </div>
                 <div className="text-xs text-slate-200 leading-relaxed bg-indigo-950/30 p-3 rounded-lg border border-indigo-800/40">
-                  <span className="font-bold text-emerald-400 block mb-1">Why Option {String.fromCharCode(65 + currentQ.correct_option_index)} is Correct:</span>
+                  <span className="font-bold text-emerald-400 block mb-1">Why Option {String.fromCharCode(65 + (currentQ.correct_option_index ?? 0))} is Correct:</span>
                   {currentQ.explanation}
                 </div>
 
                 <div className="space-y-1.5 pt-1">
                   <div className="text-[11px] font-semibold text-slate-400">Distractor Misconception Explanations:</div>
-                  {currentQ.distractor_explanations.map((dExp, dIdx) => (
+                  {(currentQ.distractor_explanations || []).map((dExp: string, dIdx: number) => (
                     <div key={dIdx} className="text-[11px] text-slate-400 flex items-start gap-2">
                       <span className="font-mono text-slate-500 font-bold">{String.fromCharCode(65 + dIdx)}:</span>
                       <span>{dExp}</span>
@@ -355,7 +355,7 @@ export const MockTestSimulator: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-5 gap-2">
-              {testData.questions.map((q, idx) => {
+              {testData.questions.map((q: MockTestQuestion, idx: number) => {
                 const isCurrent = currentQuestionIndex === idx;
                 const isAnswered = selectedAnswers[idx] !== undefined;
                 const isFlagged = flaggedQuestions[idx];

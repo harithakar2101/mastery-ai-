@@ -8,6 +8,7 @@ function rowToIntervention(row: any): InterventionDbRecord {
     studentId: row.student_id,
     studentName: row.student_name || undefined,
     conceptId: row.concept_id || undefined,
+    conceptName: row.concept_name || undefined,
     tier: row.tier ?? 1,
     issueType: row.issue_type || 'CONCEPTUAL_GAP',
     refusalReason: row.refusal_reason || undefined,
@@ -32,10 +33,10 @@ export const interventionRepository = {
 
     const stmt = db.prepare(`
       INSERT INTO interventions (
-        id, student_id, student_name, concept_id, tier, issue_type,
+        id, student_id, student_name, concept_id, concept_name, tier, issue_type,
         refusal_reason, tutor_message, socratic_question, status,
         outcome, approved_at, outcome_recorded_at, ts, created_at, synthetic
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -43,6 +44,7 @@ export const interventionRepository = {
       item.studentId,
       item.studentName || null,
       item.conceptId || null,
+      item.conceptName || null,
       item.tier ?? 1,
       item.issueType || 'CONCEPTUAL_GAP',
       item.refusalReason || null,

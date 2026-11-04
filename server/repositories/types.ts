@@ -17,6 +17,10 @@ export interface ISLMRecord {
   independent_solves: number;
   scaffolding_fading_index: number;
   time_spent_mins: number;
+  current_concept_id?: string;
+  concept_name?: string;
+  frequent_cognitive_misconception?: string;
+  recent_failure_category?: string;
   history?: any[];
   synthetic?: boolean;
 }
@@ -58,6 +62,7 @@ export interface InterventionDbRecord {
   studentId: string;
   studentName?: string;
   conceptId?: string;
+  conceptName?: string;
   tier: number;
   issueType: string;
   refusalReason?: string;

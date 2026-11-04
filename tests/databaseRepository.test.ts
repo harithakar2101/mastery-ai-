@@ -93,23 +93,25 @@ describe('Database Repositories & Cursor Pagination Suite', () => {
       id: 'fc_test_1',
       studentId: studentUser.id,
       conceptId: 'tcp_handshake',
-      box: 2,
+      conceptName: 'TCP Handshake',
+      track: 'Computer Networks',
+      leitnerBox: 2,
       intervalDays: 3,
-      dueTimestamp: new Date().toISOString(),
+      dueDate: new Date().toISOString(),
       easeFactor: 2.5,
       repetitions: 2,
     });
     const retrievedFc = flashcardRepository.findById('fc_test_1');
     assert.ok(retrievedFc);
     assert.equal(retrievedFc?.conceptId, 'tcp_handshake');
-    assert.equal(retrievedFc?.box, 2);
+    assert.equal(retrievedFc?.leitnerBox, 2);
 
     // 3. StudyPlan repository
     studyPlanRepository.upsert({
       id: 'plan_test_1',
       studentId: studentUser.id,
       title: 'Operating Systems Mastery',
-      weeklyGoals: ['Threads', 'Deadlocks'],
+      goals: ['Threads', 'Deadlocks'],
       status: 'active',
     });
     const retrievedPlan = studyPlanRepository.findById('plan_test_1');

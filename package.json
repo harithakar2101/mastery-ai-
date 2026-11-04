@@ -10,11 +10,12 @@
     "start": "tsx server.ts",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx --test tests/**/*.test.ts",
+    "test": "tsx --test --test-concurrency=1 tests/**/*.test.ts",
     "test:e2e": "playwright test",
     "test:concurrency": "tsx scripts/simulateConcurrency.ts",
     "db:migrate-json": "tsx server/scripts/migrateFromStoreJson.ts",
-    "db:backup": "tsx server/scripts/backupDatabase.ts"
+    "db:backup": "tsx server/scripts/backupDatabase.ts",
+    "seed:accounts": "tsx server/scripts/seedAccounts.ts"
   },
   "engines": {
     "node": ">=20.0.0"

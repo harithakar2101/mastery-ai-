@@ -71,9 +71,9 @@ export const userRepository = {
   },
 
   upsert(user: Partial<StoreUser> & { id: string; email: string; name?: string; role?: UserRole; synthetic?: boolean }): StoreUser {
-    const existing = this.findById(user.id);
+    const existing = this.findById(user.id) || this.findByEmail(user.email);
     if (existing) {
-      return this.update(user.id, user)!;
+      return this.update(existing.id, user)!;
     }
     return this.create({
       id: user.id,

@@ -115,13 +115,7 @@ export interface StoreData {
     activeInterventions: number;
     track: string;
   }>;
-  studies: Array<{
-    id: string;
-    title: string;
-    sampleSize: number;
-    metrics: Record<string, any>;
-    provenance: string;
-  }>;
+  studies: any[];
   dkmStates?: Record<string, any[]>; // studentId -> dkmNodes
 }
 
@@ -149,8 +143,8 @@ export function getDemoStore(): StoreData {
     users: [
       {
         id: 'CSE_STU_8810',
-        name: 'haritha karthikkumar',
-        email: 'haritha.k@university.edu',
+        name: 'Alex Rivera',
+        email: 'alex.rivera@university.edu',
         role: 'student',
         plan: 'Free Plan',
         degree: 'B.Tech in Computer Science & Engineering',
@@ -256,8 +250,8 @@ export function getDemoStore(): StoreData {
     islm: [
       {
         student_id: 'CSE_STU_8810',
-        name: 'haritha karthikkumar',
-        email: 'haritha.k@university.edu',
+        name: 'Alex Rivera',
+        email: 'alex.rivera@university.edu',
         role: 'student',
         course_track: 'Web Application Development',
         overall_mastery: 0.75,
@@ -424,20 +418,7 @@ export function getDemoStore(): StoreData {
         track: 'Web Application Development',
       },
     ],
-    studies: [
-      {
-        id: 'study_socratic_vs_direct',
-        title: 'Socratic Scaffolding vs Direct Solution In CSE Problem Solving',
-        sampleSize: 120,
-        metrics: {
-          fadingIndexGain: '+38%',
-          retentionRate: '84%',
-          independentSolveDelta: '+41%',
-          misconceptionRecurrenceDrop: '-62%',
-        },
-        provenance: 'STUDY DATA',
-      },
-    ],
+    studies: [],
     dkmStates: {},
   };
 }
@@ -460,7 +441,11 @@ export async function seedDemoStore(): Promise<StoreData> {
   }
   for (const s of demo.studies || []) {
     if (!studyRepository.findById(s.id)) {
-      studyRepository.create(s);
+      studyRepository.create({
+        ...s,
+        topicId: s.topicId || 'web_apache_docroot',
+        topicName: s.topicName || 'Apache DocumentRoot Configuration',
+      });
     }
   }
   return readStore();

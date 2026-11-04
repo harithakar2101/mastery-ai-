@@ -20,6 +20,7 @@ import {
   BarChart2,
   Clock,
   Palette,
+  Square,
 } from 'lucide-react';
 
 export const VisionSolveChat: React.FC = () => {
@@ -43,6 +44,7 @@ export const VisionSolveChat: React.FC = () => {
   const [thinkingStep, setThinkingStep] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -66,6 +68,12 @@ export const VisionSolveChat: React.FC = () => {
       setIsThinking(false);
       setThinkingStep(null);
     }
+  };
+
+  const handleStopThinking = () => {
+    abortControllerRef.current?.abort();
+    setIsThinking(false);
+    setThinkingStep(null);
   };
 
   const visualizerOptions: Array<{ mode: VisualizerMode; label: string; desc: string }> = [

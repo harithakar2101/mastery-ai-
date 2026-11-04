@@ -83,7 +83,7 @@ export class StructuredLogger {
       payload = { ...msgOrPayload, ...(extra || {}) };
     }
 
-    const merged = {
+    const merged: Record<string, any> = {
       level,
       time: new Date().toISOString(),
       service: 'mastery-engine',

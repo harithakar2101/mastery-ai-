@@ -13,8 +13,8 @@ let baseUrl: string;
 
 const studentUser: StoreUser = {
   id: 'CSE_STU_8810',
-  name: 'Haritha Student',
-  email: 'haritha.k@university.edu',
+  name: 'Demo Student',
+  email: 'student.demo@university.edu',
   role: 'student',
   plan: 'Free Plan',
   tokenVersion: 1,
@@ -311,7 +311,7 @@ describe('Production Auth & Strict Access Control Tests', () => {
       },
       body: JSON.stringify({
         userProfile: {
-          name: 'Updated Haritha',
+          name: 'Updated Student',
           theme: 'dark',
         },
       }),
@@ -322,7 +322,7 @@ describe('Production Auth & Strict Access Control Tests', () => {
     assert.equal(body.success, true);
 
     const updated = userRepository.findById(studentUser.id);
-    assert.equal(updated?.name, 'Updated Haritha');
+    assert.equal(updated?.name, 'Updated Student');
     assert.equal(updated?.role, 'student'); // Still student
     assert.equal(updated?.plan, 'Free Plan'); // Still Free Plan
   });

@@ -581,7 +581,7 @@ export const LiveClassView: React.FC = () => {
                 <div className="text-xs font-bold text-slate-200 flex items-center gap-2">
                   <span>{userProfile.name}</span>
                   <span className="text-[10px] font-mono bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded border border-indigo-800">
-                    BKT p(L): {((sessionState?.students?.[userProfile.id]?.pL ?? islm.overall_mastery) * 100).toFixed(0)}%
+                    BKT p(L): {(((sessionState?.students?.[userProfile.id]?.pL ?? islm.overall_mastery ?? 0.6)) * 100).toFixed(0)}%
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-400">

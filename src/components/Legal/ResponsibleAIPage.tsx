@@ -43,7 +43,7 @@ export const ResponsibleAIPage: React.FC<ResponsibleAIPageProps> = ({ onBack }) 
             <div>
               <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
                 <span>Responsible AI & Pedagogical Integrity Charter</span>
-                <Badge variant="blue" size="xs">Release Candidate v1.0</Badge>
+                <Badge variant="info" size="xs">Release Candidate v1.0</Badge>
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
                 Transparent declaration of model capabilities, safety guardrails, and technical limitations.

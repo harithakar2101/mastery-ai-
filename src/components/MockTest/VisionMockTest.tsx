@@ -1094,7 +1094,7 @@ export const VisionMockTest: React.FC = () => {
         {/* TAB 2: SECTIONS */}
         {activeResultTab === 'Sections' && (
           <div className="space-y-4">
-            {resultData.sections.map((sec, idx) => (
+            {resultData.sections.map((sec, idx: number) => (
               <div key={idx} className="bg-[#0c1421] border border-[#1a273b] rounded-2xl p-5 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1125,7 +1125,7 @@ export const VisionMockTest: React.FC = () => {
           <div className="bg-[#0c1421] border border-[#1a273b] rounded-2xl p-6 space-y-4">
             <h4 className="text-sm font-bold text-white">Longest questions</h4>
             <div className="space-y-2 text-xs">
-              {resultData.questions.map((q, idx) => (
+              {resultData.questions.map((q, idx: number) => (
                 <div
                   key={idx}
                   className="p-3 bg-[#070d18] rounded-xl flex items-center justify-between gap-4 border border-[#1a273b]"
@@ -1150,7 +1150,7 @@ export const VisionMockTest: React.FC = () => {
         {/* TAB 4: ANSWERS (Detailed Option Explanations from Video!) */}
         {activeResultTab === 'Answers' && (
           <div className="space-y-4">
-            {resultData.questions.map((q, idx) => {
+            {resultData.questions.map((q, idx: number) => {
               const isCorrect = q.user_selected_index === q.correct_option_index;
 
               return (
@@ -1180,7 +1180,7 @@ export const VisionMockTest: React.FC = () => {
                   </h3>
 
                   <div className="space-y-2">
-                    {q.options.map((opt, oIdx) => {
+                    {q.options.map((opt: string, oIdx: number) => {
                       const isOptionCorrect = q.correct_option_index === oIdx;
                       const isUserChoice = q.user_selected_index === oIdx;
 

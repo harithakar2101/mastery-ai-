@@ -17,7 +17,7 @@ import {
   Info,
 } from 'lucide-react';
 import { WearableEvent, AccessibilityMode, WearableRequestStatus, DataSource } from './types';
-import wearableConfig from '../../shared/wearable_config.json';
+import wearableConfig from '../../../shared/wearable_config.json';
 
 interface LiveRequestsViewProps {
   userRole?: string;

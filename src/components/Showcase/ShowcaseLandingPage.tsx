@@ -71,7 +71,7 @@ export const ShowcaseLandingPage: React.FC<{
       const data = await res.json();
       if (res.ok && data.success) {
         setUserProfile(data.user);
-        if (data.islm) setIslmState(data.islm);
+        if (data.islm && setIslmState) setIslmState(data.islm);
         setIsAuthenticated(true);
         setCurrentWorkflow('STUDY_STUDIO');
       } else {

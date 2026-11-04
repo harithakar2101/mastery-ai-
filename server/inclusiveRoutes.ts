@@ -110,7 +110,7 @@ inclusiveRouter.post('/events', async (req: Request, res: Response) => {
   try {
     const parseResult = eventSubmissionSchema.safeParse(req.body);
     if (!parseResult.success) {
-      return sendError(res, 400, 'INVALID_PAYLOAD', parseResult.error.errors[0]?.message || 'Invalid payload', req);
+      return sendError(res, 400, 'INVALID_PAYLOAD', parseResult.error.issues?.[0]?.message || 'Invalid payload', req);
     }
     const data = parseResult.data;
 
@@ -197,7 +197,7 @@ inclusiveRouter.post('/sensors', async (req: Request, res: Response) => {
   try {
     const parseResult = sensorReadingSchema.safeParse(req.body);
     if (!parseResult.success) {
-      return sendError(res, 400, 'INVALID_SENSOR_DATA', parseResult.error.errors[0]?.message || 'Invalid sensor reading', req);
+      return sendError(res, 400, 'INVALID_SENSOR_DATA', parseResult.error.issues?.[0]?.message || 'Invalid sensor reading', req);
     }
     const data = parseResult.data;
 

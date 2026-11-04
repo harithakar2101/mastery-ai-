@@ -542,6 +542,16 @@ export const migrations: Migration[] = [
       insertSensor.run('sens_sim_3', 'ESP32-03', 'STU_SIM_C', 92.4, 98.0, 7.8, 0.22, 0.15, 9.82, 36.8, 0, 1, now, now);
     },
   },
+  {
+    version: 8,
+    name: '008_interventions_concept_name',
+    up: (db: Database.Database) => {
+      const cols = db.prepare("PRAGMA table_info(interventions)").all() as Array<{ name: string }>;
+      if (!cols.some(c => c.name === 'concept_name')) {
+        db.exec("ALTER TABLE interventions ADD COLUMN concept_name TEXT");
+      }
+    },
+  },
 ];
 
 export function runMigrations(targetDb?: Database.Database): number {

@@ -39,7 +39,7 @@ export const PrivacyPolicyPage: React.FC<PrivacyPolicyPageProps> = ({ onBack }) 
             <div>
               <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
                 <span>Privacy & Data Sovereignty Policy</span>
-                <Badge variant="emerald" size="xs">FERPA & GDPR Aligned</Badge>
+                <Badge variant="success" size="xs">FERPA & GDPR Aligned</Badge>
               </h1>
               <p className="text-xs text-slate-400 mt-0.5">
                 How Mastery.ai protects learner identities, isolates sensor streams, and upholds self-service deletion rights.

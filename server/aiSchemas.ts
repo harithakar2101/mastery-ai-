@@ -13,10 +13,10 @@ export const tutoringResponseZodSchema = z.object({
     tutor_message: z.string(),
     socratic_question: z.string(),
   }),
-  visualizer_data: z.record(z.any()).optional().nullable(),
-  islm_updates: z.record(z.any()).optional().nullable(),
-  content_hooks: z.record(z.any()).optional().nullable(),
-  research_telemetry: z.record(z.any()).optional().nullable(),
+  visualizer_data: z.record(z.string(), z.any()).optional().nullable(),
+  islm_updates: z.record(z.string(), z.any()).optional().nullable(),
+  content_hooks: z.record(z.string(), z.any()).optional().nullable(),
+  research_telemetry: z.record(z.string(), z.any()).optional().nullable(),
 });
 
 export const videoSceneZodSchema = z.object({

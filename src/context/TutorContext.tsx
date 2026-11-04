@@ -228,22 +228,22 @@ export const TutorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ...prev.topic_mastery,
         [updatedNode.id]: updatedNode.mastery,
       };
-      const values = Object.values(updatedTopicMastery);
+      const values: number[] = Object.values(updatedTopicMastery || {}) as number[];
       const overall = values.reduce((a, b) => a + b, 0) / (values.length || 1);
 
       const recentMisconceptions = !input.isCorrect && input.errorCategory
-        ? [input.errorCategory, ...prev.recent_misconceptions.filter(m => m !== input.errorCategory)].slice(0, 5)
-        : prev.recent_misconceptions;
+        ? [input.errorCategory, ...((prev.recent_misconceptions || []).filter((m: string) => m !== input.errorCategory))].slice(0, 5)
+        : (prev.recent_misconceptions || []);
 
       return {
         ...prev,
         topic_mastery: updatedTopicMastery,
         overall_mastery: +overall.toFixed(2),
-        independent_solves: input.isIndependent && input.isCorrect ? prev.independent_solves + 1 : prev.independent_solves,
-        error_count: !input.isCorrect ? prev.error_count + 1 : prev.error_count,
+        independent_solves: input.isIndependent && input.isCorrect ? (prev.independent_solves || 0) + 1 : (prev.independent_solves || 0),
+        error_count: !input.isCorrect ? (prev.error_count || 0) + 1 : (prev.error_count || 0),
         scaffolding_fading_index: input.isCorrect
-          ? Math.min(1.0, +(prev.scaffolding_fading_index + 0.05).toFixed(2))
-          : Math.max(0.1, +(prev.scaffolding_fading_index - 0.05).toFixed(2)),
+          ? Math.min(1.0, +((prev.scaffolding_fading_index ?? 0.5) + 0.05).toFixed(2))
+          : Math.max(0.1, +((prev.scaffolding_fading_index ?? 0.5) - 0.05).toFixed(2)),
         recent_misconceptions: recentMisconceptions,
         history: [
           {
@@ -253,10 +253,10 @@ export const TutorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             topic_name: updatedNode.name,
             tier_used: input.tierUsed || prev.scaffolding_tier_required || 1,
             issue_type: input.isCorrect ? 'PRACTICAL_EXECUTION_ERROR' : 'CONCEPTUAL_GAP',
-            resolved_independently: input.isIndependent && input.isCorrect,
+            resolved_independently: Boolean(input.isIndependent && input.isCorrect),
             notes: `BKT transition: prior ${trace.prior} -> posterior ${trace.posterior} (${input.source})`,
           },
-          ...prev.history,
+          ...(prev.history || []),
         ],
       };
     });
@@ -548,7 +548,7 @@ export const TutorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const exportOfflinePack = () => {
-    exportOfflinePackFile(userProfile, islm, dkmNodes);
+    exportOfflinePackFile({ userProfile, islm, dkmNodes });
   };
 
   return (
@@ -575,6 +575,8 @@ export const TutorProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         attempts,
         uiLanguage,
         setUiLanguage,
+        setDkmNodes,
+        setIslmState: setIslm,
         setActiveReviewQuestions,
         setActiveTrack,
         setSelectedNode,

@@ -145,7 +145,7 @@ portfolioRouter.get('/', authenticate, (req: Request, res: Response) => {
 
     // Build Verified Skills list with evidence links
     const topicMastery: Record<string, number> = islm?.topic_mastery || {};
-    const dkmNodes: any[] = dkm?.nodes || [];
+    const dkmNodes: any[] = Array.isArray(dkm) ? dkm : [];
 
     // Map each concept to mastery level and evidence
     const skillsMap = new Map<string, any>();
@@ -185,7 +185,7 @@ portfolioRouter.get('/', authenticate, (req: Request, res: Response) => {
     // 2. Ensure default foundational engineering skills exist if DKM was empty
     if (skillsMap.size === 0) {
       const defaults = [
-        { id: 'bkt-recursion', name: 'Recursive Algorithms & Trees', track: 'Computer Science', pL: user.overall_mastery || 0.85 },
+        { id: 'bkt-recursion', name: 'Recursive Algorithms & Trees', track: 'Computer Science', pL: user.overallMastery || 0.85 },
         { id: 'cad-csg-booleans', name: '3D CSG Boolean Operations', track: 'Mechanical CAD', pL: 0.88 },
         { id: 'web-dom-state', name: 'Reactive DOM State Architecture', track: 'Web Engineering', pL: 0.82 },
         { id: 'ai-bkt-inference', name: 'Bayesian Knowledge Tracing Models', track: 'AI & Data Science', pL: 0.91 },
@@ -258,7 +258,7 @@ portfolioRouter.get('/', authenticate, (req: Request, res: Response) => {
         title: 'Cognitive Diagnostic Pretest Completed',
         category: 'Diagnostic',
         description: 'Completed baseline diagnostic evaluation initializing the Bayesian Knowledge Model.',
-        timestamp: user.created_at,
+        timestamp: user.createdAt,
         verified: true,
       },
       ...attempts.filter(a => a.passed).slice(0, 5).map(a => ({
@@ -269,7 +269,7 @@ portfolioRouter.get('/', authenticate, (req: Request, res: Response) => {
         timestamp: a.ts,
         verified: true,
       })),
-    ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    ].sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
 
     return res.json({
       success: true,
@@ -446,7 +446,7 @@ portfolioRouter.get('/transcript.json', authenticate, (req: Request, res: Respon
         id: `urn:student:${studentId}`,
         name: user.name,
         degree: user.degree || "Computer Science Scholar",
-        overallMasteryScore: user.overall_mastery,
+        overallMasteryScore: user.overallMastery,
         verifiedAttemptsCount: passedAttempts.length,
         verifiedSkills: Object.entries(islm?.topic_mastery || {}).map(([topic, score]) => ({
           skill: topic,
@@ -466,7 +466,7 @@ portfolioRouter.get('/transcript.json', authenticate, (req: Request, res: Respon
         created: new Date().toISOString(),
         verificationMethod: "https://mastery.ai/keys/bkt-public-key.json",
         proofPurpose: "assertionMethod",
-        jws: `cogni_sig_${Buffer.from(`${studentId}:${user.overall_mastery}:${Date.now()}`).toString('base64url')}`
+        jws: `cogni_sig_${Buffer.from(`${studentId}:${user.overallMastery}:${Date.now()}`).toString('base64url')}`
       }
     };
 
@@ -503,7 +503,7 @@ portfolioRouter.get('/public/:slug', (req: Request, res: Response) => {
 
     // Build skills strictly with sanitized evidence (no private data or full logs)
     const topicMastery: Record<string, number> = islm?.topic_mastery || {};
-    const dkmNodes: any[] = dkm?.nodes || [];
+    const dkmNodes: any[] = Array.isArray(dkm) ? dkm : [];
     const skillsMap = new Map<string, any>();
 
     dkmNodes.forEach((node: any) => {
@@ -531,7 +531,7 @@ portfolioRouter.get('/public/:slug', (req: Request, res: Response) => {
         id: 'core-algorithms',
         name: 'Algorithms & Data Structures',
         track: 'Computer Science',
-        masteryLevel: Math.round((user.overall_mastery || 0.85) * 100),
+        masteryLevel: Math.round((user.overallMastery || 0.85) * 100),
         status: 'Mastered',
         verificationType: 'verified_by_assessment',
         evidenceCount: 4,
@@ -584,8 +584,8 @@ portfolioRouter.get('/public/:slug', (req: Request, res: Response) => {
           bio: profile.bio,
           avatarUrl: profile.avatarUrl,
           socialLinks: profile.socialLinks,
-          overallMastery: user.overall_mastery,
-          streakDays: user.streak_days,
+          overallMastery: user.overallMastery,
+          streakDays: user.streakDays,
           slug: profile.slug,
           visibility: profile.visibility,
           verifiedAt: profile.updatedAt,

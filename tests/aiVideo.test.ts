@@ -212,7 +212,7 @@ describe('AI Video Downloadable Feature & Pipeline Suite', () => {
     const stored = videoRepository.findByShareToken(saveData.shareToken);
     assert.ok(stored, 'Record must be saved in database');
     assert.equal(stored.durationSeconds, 60);
-    assert.equal(stored.renderSettings.resolution, '1280x720');
+    assert.equal(stored.renderSettings?.resolution, '1280x720');
 
     // Verify user can list their saved videos
     const listRes = await fetch(`${baseUrl}/api/video/list`, {

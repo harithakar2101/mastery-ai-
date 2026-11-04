@@ -103,7 +103,7 @@ export const LibraryVault: React.FC = () => {
 
   const filteredDocs = documents.filter(d =>
     d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
+    d.tags.some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleProcessDocument = async (doc: LibraryDocument) => {

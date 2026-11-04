@@ -38,7 +38,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
           inviteCode: inviteCode.trim() || undefined,
         });
       } else {
-        const userEmail = email.trim() || 'haritha.k@university.edu';
+        const userEmail = email.trim() || 'alex.rivera@university.edu';
         const userPass = password.trim() || 'Password123!';
         await loginWithServer({
           email: userEmail,
@@ -59,7 +59,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
     try {
       if (demoKey === 'student') {
         await loginWithServer({
-          email: 'haritha.k@university.edu',
+          email: 'alex.rivera@university.edu',
           password: 'Password123!',
         });
       } else if (demoKey === 'teacher') {
@@ -146,7 +146,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                     required
                     value={name}
                     onChange={e => setName(e.target.value)}
-                    placeholder="e.g. Haritha Karthikkumar"
+                    placeholder="e.g. Alex Rivera"
                     className="w-full bg-[#070d18] border border-[#1a273b] rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   />
                 </div>
@@ -177,7 +177,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder={isRegister ? "name@university.edu" : "haritha.k@university.edu"}
+                placeholder={isRegister ? "name@university.edu" : "alex.rivera@university.edu"}
                 className="w-full bg-[#070d18] border border-[#1a273b] rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
@@ -254,7 +254,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSuccess }) => {
               className="p-2 bg-[#070d18] hover:bg-[#111e33] border border-[#1a273b] rounded-xl text-left transition-all cursor-pointer group"
             >
               <div className="text-[10px] font-semibold text-blue-400 group-hover:text-blue-300">Student</div>
-              <div className="text-[11px] font-bold text-slate-200 truncate">Haritha K.</div>
+              <div className="text-[11px] font-bold text-slate-200 truncate">Alex Rivera</div>
               <div className="text-[9px] text-slate-500 truncate">CSE_STU_8810</div>
             </button>
 

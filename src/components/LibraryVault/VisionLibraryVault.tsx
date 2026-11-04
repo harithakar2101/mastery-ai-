@@ -137,7 +137,7 @@ export const VisionLibraryVault: React.FC = () => {
       selectedCategory === 'All' || d.category === selectedCategory || d.tags.includes(selectedCategory);
     const matchesSearch =
       d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      d.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      d.tags.some((t: string) => t.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
 
@@ -306,7 +306,7 @@ export const VisionLibraryVault: React.FC = () => {
 
               {/* Tags */}
               <div className="flex flex-wrap gap-1 mt-3">
-                {doc.tags.slice(0, 3).map((tag, i) => (
+                {doc.tags.slice(0, 3).map((tag: string, i: number) => (
                   <span
                     key={i}
                     className="text-[10px] bg-[#070d18] border border-[#1a273b] text-slate-400 px-2 py-0.5 rounded-md"

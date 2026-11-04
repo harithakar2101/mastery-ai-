@@ -24,8 +24,11 @@ import {
 } from './aiSchemas.ts';
 import { auditLogRepository } from './repositories/auditLogRepository.ts';
 
-const geminiApiKey = process.env.GEMINI_API_KEY;
 let aiClient: GoogleGenAI | null = null;
+let lastApiKeyChecked: string | null = null;
+
+let lastAiSuccess: string | null = null;
+let lastAiErrorMessage: string | null = null;
 
 export function cleanErrorMessage(err: any): string {
   if (!err) return 'Gemini API high load or offline; local Socratic fallback engaged';
@@ -44,23 +47,121 @@ export function cleanErrorMessage(err: any): string {
   return str;
 }
 
-if (geminiApiKey && geminiApiKey !== 'MY_GEMINI_API_KEY' && geminiApiKey.trim().length > 10) {
+export function recordAiSuccess() {
+  lastAiSuccess = new Date().toISOString();
+  lastAiErrorMessage = null;
+}
+
+export function recordAiFailure(err: any) {
+  lastAiErrorMessage = cleanErrorMessage(err);
+}
+
+export function getAiClient(): GoogleGenAI | null {
+  const currentKey = process.env.GEMINI_API_KEY?.trim();
+  const isInvalid =
+    !currentKey ||
+    currentKey === 'MY_GEMINI_API_KEY' ||
+    currentKey === 'TODO' ||
+    currentKey === 'PLACEHOLDER' ||
+    currentKey.startsWith('TODO') ||
+    currentKey.startsWith('PLACEHOLDER') ||
+    currentKey.length < 10;
+
+  if (isInvalid) {
+    aiClient = null;
+    lastApiKeyChecked = null;
+    return null;
+  }
+
+  if (aiClient && lastApiKeyChecked === currentKey) {
+    return aiClient;
+  }
+
   try {
     aiClient = new GoogleGenAI({
-      apiKey: geminiApiKey,
+      apiKey: currentKey,
       httpOptions: {
         headers: {
           'User-Agent': 'aistudio-build',
         },
       },
     });
-  } catch (err) {
-    logger.error({ msg: 'Failed to initialize GoogleGenAI client', err });
+    lastApiKeyChecked = currentKey;
+    return aiClient;
+  } catch (err: any) {
+    logger.error({ msg: 'Failed to initialize GoogleGenAI client lazily', err });
+    recordAiFailure(err);
+    aiClient = null;
+    return null;
   }
 }
 
-export function getAiClient(): GoogleGenAI | null {
-  return aiClient;
+export function getAiStatus() {
+  const currentKey = process.env.GEMINI_API_KEY?.trim();
+  const keyConfigured = Boolean(
+    currentKey &&
+    currentKey !== 'MY_GEMINI_API_KEY' &&
+    currentKey !== 'TODO' &&
+    currentKey !== 'PLACEHOLDER' &&
+    !currentKey.startsWith('TODO') &&
+    !currentKey.startsWith('PLACEHOLDER') &&
+    currentKey.length > 10
+  );
+
+  return {
+    keyConfigured,
+    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    ttsModel: process.env.GEMINI_TTS_MODEL || 'gemini-2.5-flash-tts',
+    videoModel: process.env.GEMINI_VIDEO_MODEL || null,
+    lastSuccess: lastAiSuccess,
+    lastErrorMessage: lastAiErrorMessage,
+    circuitBreakerState: geminiCircuitBreaker.getState ? geminiCircuitBreaker.getState() : 'CLOSED',
+  };
+}
+
+export async function testAiConnection(): Promise<{
+  success: boolean;
+  latencyMs: number;
+  model: string;
+  error?: string;
+}> {
+  const client = getAiClient();
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  if (!client) {
+    return {
+      success: false,
+      latencyMs: 0,
+      model,
+      error: 'GEMINI_API_KEY is not configured or is a placeholder',
+    };
+  }
+
+  const start = Date.now();
+  try {
+    const response = await client.models.generateContent({
+      model,
+      contents: 'Respond with a single JSON word: {"status": "ok"}',
+      config: {
+        responseMimeType: 'application/json',
+      },
+    });
+    const latencyMs = Date.now() - start;
+    recordAiSuccess();
+    return {
+      success: true,
+      latencyMs,
+      model,
+    };
+  } catch (err: any) {
+    const latencyMs = Date.now() - start;
+    recordAiFailure(err);
+    return {
+      success: false,
+      latencyMs,
+      model,
+      error: cleanErrorMessage(err),
+    };
+  }
 }
 
 export function pcmToWav(pcmData: Buffer, sampleRate = 24000, numChannels = 1, bitsPerSample = 16): Buffer {
@@ -107,7 +208,8 @@ export async function generateGeminiTTS(text: string, voiceName = 'Puck'): Promi
 }> {
   const ttsModel = process.env.GEMINI_TTS_MODEL || 'gemini-2.0-flash';
 
-  if (!aiClient) {
+  const client = getAiClient();
+  if (!client) {
     return {
       audioAvailable: false,
       reason: 'Gemini TTS unavailable: GEMINI_API_KEY is not configured or offline',
@@ -115,7 +217,7 @@ export async function generateGeminiTTS(text: string, voiceName = 'Puck'): Promi
   }
 
   try {
-    const response = await aiClient.models.generateContent({
+    const response = await client.models.generateContent({
       model: ttsModel,
       contents: `Please read this educational script aloud with a clear, engaging tone: "${sanitizeUntrustedInput(text)}"`,
       config: {
@@ -186,7 +288,8 @@ export async function callGeminiWithRetry<T>(
     };
   }
 
-  if (!aiClient) {
+  const client = getAiClient();
+  if (!client) {
     return {
       data: null,
       error: 'GEMINI_API_KEY is not configured or offline',
@@ -202,7 +305,7 @@ export async function callGeminiWithRetry<T>(
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const response = await aiClient!.models.generateContent({
+      const response = await client.models.generateContent({
         model,
         contents: targetPrompt,
         config: {
@@ -232,6 +335,7 @@ export async function callGeminiWithRetry<T>(
   try {
     rawData = await singleAttempt();
     geminiCircuitBreaker.recordSuccess();
+    recordAiSuccess();
   } catch (err1: any) {
     logger.warn({ msg: `[Gemini Attempt 1 Failed]: ${err1?.message || err1}. Retrying with exponential backoff...` });
 
@@ -242,8 +346,10 @@ export async function callGeminiWithRetry<T>(
     try {
       rawData = await singleAttempt();
       geminiCircuitBreaker.recordSuccess();
+      recordAiSuccess();
     } catch (err2: any) {
       geminiCircuitBreaker.recordFailure(err2);
+      recordAiFailure(err2);
       logger.error({ msg: `[Gemini Attempt 2 Failed]: ${err2?.message || err2}. Circuit failure recorded.` });
       return {
         data: null,
@@ -481,21 +587,33 @@ export async function processTutoringRequest(tutorReq: any) {
     };
   }
 
-  // 2. Simple greeting bypass
+  // 2. Greeting handling
   const isGreeting = /^(hi|hello|hey|greetings|howdy|good\s+(morning|afternoon|evening)|yo|hola|start|sup|welcome)(\s+.*)?$/i.test(
     studentInput
   );
-  if (isGreeting) {
+  if (isGreeting && !getAiClient()) {
     const fallback = getTutoringFallback(tutorReq);
-    return { ...fallback, source: 'gemini' as const, fallback_badge: 'LIVE AI', isFallback: false };
+    return {
+      ...fallback,
+      source: 'fallback' as const,
+      fallback_badge: 'FALLBACK',
+      isFallback: true,
+      fallback_reason: 'Local Socratic orientation fallback (GEMINI_API_KEY not configured)',
+    };
   }
 
-  // 3. Construct secured prompt with clearly delimited untrusted data blocks
+  // 3. Construct stateful secured prompt with clearly delimited untrusted data blocks
   const prompt = constructSecuredPrompt({
-    track: tutorReq.track || 'Computer Science & Engineering',
-    concept: tutorReq.concept_id || tutorReq.conceptName,
+    track: tutorReq.track || tutorReq.course_track || 'Computer Science & Engineering',
+    concept: tutorReq.concept_id || tutorReq.current_topic || tutorReq.conceptName,
     untrustedStudentInput: studentInput,
     language: tutorReq.language,
+    scaffoldingTier: tutorReq.tier || tutorReq.islm_profile?.scaffolding_tier_required || 1,
+    islmSummary: tutorReq.islm_profile,
+    codeSnippet: tutorReq.code_snippet,
+    executionLogs: tutorReq.execution_logs,
+    workflow: tutorReq.workflow,
+    history: tutorReq.history,
   });
 
   const { data, error, isFallback, fallbackBadge } = await callGeminiWithRetry<any>(

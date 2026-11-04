@@ -58,6 +58,8 @@ export interface TutorContextType {
   isWhyDrawerOpen: boolean;
   attempts: AttemptRecord[];
   uiLanguage: 'en' | 'ta' | 'hi';
+  setDkmNodes: React.Dispatch<React.SetStateAction<DKMNode[]>>;
+  setIslmState?: React.Dispatch<React.SetStateAction<ISLMProfile>>;
   setUiLanguage: (lang: 'en' | 'ta' | 'hi') => void;
   setActiveReviewQuestions: (questions: MockTestQuestion[] | null) => void;
   setActiveTrack: (track: string) => void;

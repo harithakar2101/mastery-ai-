@@ -78,7 +78,7 @@ export async function runConcurrencySimulation(numStudents = 50, eventsPerStuden
   // Verify write completeness before restart
   let verifiedBeforeRestart = 0;
   for (const studentId of studentIds) {
-    const count = eventRepository.listByStudentPaginated(studentId, { limit: 100 }).totalCount;
+    const count = eventRepository.listByStudentPaginated(studentId, { limit: 100 }).totalCount ?? 0;
     verifiedBeforeRestart += count;
   }
 
@@ -101,7 +101,7 @@ export async function runConcurrencySimulation(numStudents = 50, eventsPerStuden
     const user = userRepository.findById(studentId);
     if (!user) allStudentsPreserved = false;
 
-    const count = eventRepository.listByStudentPaginated(studentId, { limit: 100 }).totalCount;
+    const count = eventRepository.listByStudentPaginated(studentId, { limit: 100 }).totalCount ?? 0;
     verifiedAfterRestart += count;
   }
 

@@ -15,7 +15,7 @@ import {
   Info,
 } from 'lucide-react';
 import { WearableDevice, WearableEvent } from './types';
-import wearableConfig from '../../shared/wearable_config.json';
+import wearableConfig from '../../../shared/wearable_config.json';
 
 interface StudentWearableProfileViewProps {
   userId?: string;

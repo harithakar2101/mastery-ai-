@@ -26,11 +26,11 @@ export const StudentDashboard: React.FC = () => {
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 font-bold text-xl">
-            {islm.name.split(' ').map(n => n[0]).join('')}
+            {(islm.name || 'Alex Rivera').split(' ').map((n: string) => n[0]).join('')}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-slate-100">{islm.name}</h1>
+              <h1 className="text-xl font-bold text-slate-100">{islm.name || 'Alex Rivera'}</h1>
               <span className="text-[10px] font-mono bg-indigo-950 text-indigo-300 border border-indigo-800 px-2 py-0.5 rounded-full">
                 {islm.student_id}
               </span>
@@ -66,9 +66,9 @@ export const StudentDashboard: React.FC = () => {
             <span>Overall ISLM Mastery</span>
             <Award className="w-4 h-4 text-indigo-400" />
           </div>
-          <div className="text-2xl font-bold text-slate-100">{(islm.overall_mastery * 100).toFixed(0)}%</div>
+          <div className="text-2xl font-bold text-slate-100">{(((islm.overall_mastery ?? 0.6)) * 100).toFixed(0)}%</div>
           <div className="w-full h-1 bg-slate-800 rounded-full mt-2 overflow-hidden">
-            <div className="h-full bg-indigo-500" style={{ width: `${Math.round(islm.overall_mastery * 100)}%` }} />
+            <div className="h-full bg-indigo-500" style={{ width: `${Math.round(((islm.overall_mastery ?? 0.6)) * 100)}%` }} />
           </div>
         </div>
 
@@ -156,7 +156,7 @@ export const StudentDashboard: React.FC = () => {
             </div>
 
             <div className="space-y-2.5">
-              {islm.recent_misconceptions.map((misc, idx) => (
+              {(islm.recent_misconceptions || []).map((misc: string, idx: number) => (
                 <div key={idx} className="p-3 bg-rose-950/30 rounded-xl border border-rose-900/50 text-xs space-y-1">
                   <div className="font-semibold text-rose-200 flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
@@ -189,11 +189,11 @@ export const StudentDashboard: React.FC = () => {
                 <Clock className="w-4 h-4 text-indigo-400" />
                 Pedagogical Scaffolding & Solve History
               </div>
-              <span className="text-[10px] font-mono text-slate-500">{islm.history.length} Sessions Logged</span>
+              <span className="text-[10px] font-mono text-slate-500">{(islm.history || []).length} Sessions Logged</span>
             </div>
 
             <div className="space-y-2 max-h-72 overflow-y-auto">
-              {islm.history.map(entry => (
+              {(islm.history || []).map(entry => (
                 <div key={entry.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 text-xs flex items-center justify-between gap-3">
                   <div className="space-y-0.5">
                     <div className="font-semibold text-slate-200">{entry.topic_name}</div>

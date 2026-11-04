@@ -1,5 +1,5 @@
+import 'dotenv/config';
 import express, { type Request, type Response, type NextFunction } from 'express';
-import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -37,6 +37,8 @@ import {
   processMockTestRequest,
   processLibraryRequest,
   processVariantRequest,
+  getAiStatus,
+  testAiConnection,
 } from './server/gemini.ts';
 import { helmetMiddleware, corsMiddleware, globalLimiter, authLimiter, aiLimiter } from './server/security.ts';
 import { requestIdMiddleware, authenticate, requireRole } from './server/authMiddleware.ts';
@@ -67,7 +69,6 @@ import { inclusiveRouter } from './server/inclusiveRoutes.ts';
 import { portfolioRepository } from './server/repositories/index.ts';
 import { validateEnvironment } from './server/scripts/validateEnv.ts';
 
-dotenv.config();
 validateEnvironment();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -727,6 +728,36 @@ app.get('/api/attempts', authenticate, validateQuery(attemptsQuerySchema), (req:
     return sendError(res, 500, 'ATTEMPT_FETCH_ERROR', err?.message || 'Failed to retrieve attempts', req);
   }
 });
+
+// Endpoint: AI Status & Health Telemetry (Admin & Faculty)
+app.get(
+  '/api/ai/status',
+  authenticate,
+  requireRole('admin', 'teacher'),
+  (req: Request, res: Response) => {
+    try {
+      const status = getAiStatus();
+      return res.json(status);
+    } catch (err: any) {
+      return sendError(res, 500, 'AI_STATUS_ERROR', err?.message || 'Failed to fetch AI status', req);
+    }
+  }
+);
+
+// Endpoint: Test AI Connection (Admin Only)
+app.post(
+  '/api/ai/test',
+  authenticate,
+  requireRole('admin'),
+  async (req: Request, res: Response) => {
+    try {
+      const result = await testAiConnection();
+      return res.json(result);
+    } catch (err: any) {
+      return sendError(res, 500, 'AI_TEST_ERROR', err?.message || 'Failed to execute AI test connection', req);
+    }
+  }
+);
 
 // Endpoint: Socratic Tutoring Engine (Protected & Rate Limited & Daily Quota Guarded)
 app.post(

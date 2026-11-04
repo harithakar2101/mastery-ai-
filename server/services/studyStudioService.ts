@@ -2,7 +2,7 @@ import { flashcardRepository, studyPlanRepository, dkmStateRepository, islmRepos
 import { callGeminiWithRetry } from '../gemini.ts';
 import { calculateSM2Update } from '../../src/services/spacedRepetition.ts';
 
-export type {
+import type {
   SummarySection,
   ExtractedConcept,
   StudioFlashcard,
@@ -12,6 +12,17 @@ export type {
   StudyStudioConfig,
   StudyStudioState,
 } from '../../src/types/studyStudio.ts';
+
+export type {
+  SummarySection,
+  ExtractedConcept,
+  StudioFlashcard,
+  StudioPracticeQuestion,
+  StudyDayTask,
+  StudyDaySchedule,
+  StudyStudioConfig,
+  StudyStudioState,
+};
 
 export function computeTradeOffText(targetGrade: number, dailyMinutes: number, daysRemaining: number): string {
   const percentage = Math.round(targetGrade * 10);
