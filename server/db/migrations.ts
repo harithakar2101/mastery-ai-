@@ -305,6 +305,62 @@ export const migrations: Migration[] = [
       `);
     },
   },
+  {
+    version: 6,
+    name: '006_ai_quotas_audit_logs_and_privacy',
+    up: (db: Database.Database) => {
+      // 1. Per-User and Per-Day AI Quotas table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS ai_quotas (
+          id TEXT PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          date TEXT NOT NULL,
+          request_count INTEGER DEFAULT 0,
+          tokens_used INTEGER DEFAULT 0,
+          upload_bytes INTEGER DEFAULT 0,
+          updated_at TEXT NOT NULL,
+          UNIQUE(user_id, date)
+        );
+        CREATE INDEX IF NOT EXISTS idx_ai_quotas_user_date ON ai_quotas(user_id, date);
+      `);
+
+      // 2. Structured Audit Log table for administrative & teacher operations
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS audit_logs (
+          id TEXT PRIMARY KEY,
+          user_id TEXT,
+          user_role TEXT,
+          action TEXT NOT NULL,
+          resource_type TEXT,
+          resource_id TEXT,
+          details_json TEXT DEFAULT '{}',
+          ip_address TEXT,
+          ts TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
+        CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+        CREATE INDEX IF NOT EXISTS idx_audit_logs_ts ON audit_logs(ts);
+      `);
+
+      // 3. Anti-Answer Policy Nightly Evaluations table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS anti_answer_evals (
+          id TEXT PRIMARY KEY,
+          ts TEXT NOT NULL,
+          total_prompts INTEGER NOT NULL,
+          passed_prompts INTEGER NOT NULL,
+          pass_rate REAL NOT NULL,
+          details_json TEXT DEFAULT '[]'
+        );
+      `);
+
+      // 4. Add data retention preference column to users table if absent
+      const userCols = db.prepare("PRAGMA table_info(users)").all() as Array<{ name: string }>;
+      if (!userCols.some(c => c.name === 'retention_days')) {
+        db.exec("ALTER TABLE users ADD COLUMN retention_days INTEGER DEFAULT 180");
+      }
+    },
+  },
 ];
 
 export function runMigrations(targetDb?: Database.Database): number {

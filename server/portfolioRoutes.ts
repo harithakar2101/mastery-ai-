@@ -373,6 +373,7 @@ portfolioRouter.post('/publish', authenticate, (req: Request, res: Response) => 
       visibility: profile.visibility,
       slug: profile.slug,
       publicUrl: `/p/${profile.slug}`,
+      profile,
     });
   } catch (err: any) {
     return sendError(res, 500, 'PORTFOLIO_PUBLISH_ERROR', err?.message || 'Failed to publish portfolio', req);

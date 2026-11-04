@@ -18,6 +18,9 @@ import { StudyStudioView } from './components/StudyStudio/StudyStudioView';
 import { WorkflowErrorBoundary } from './components/Common/WorkflowErrorBoundary';
 import { ShowcaseLandingPage } from './components/Showcase/ShowcaseLandingPage';
 import { PublicPortfolioPage } from './components/Portfolio/PublicPortfolioPage';
+import { ResponsibleAIPage } from './components/Legal/ResponsibleAIPage';
+import { PrivacyPolicyPage } from './components/Legal/PrivacyPolicyPage';
+import { AdminConsoleView } from './components/Admin/AdminConsoleView';
 import { ToastProvider, SkeletonCard } from './components/UI';
 
 // Route-level code splitting for heavy WebGL & Media libraries per Prompt G
@@ -213,6 +216,24 @@ const MainApplication: React.FC = () => {
       {currentWorkflow === 'LIVE_CLASS' && (
         <WorkflowErrorBoundary workflowName="Live Class Interactive Stream">
           <LiveClassView />
+        </WorkflowErrorBoundary>
+      )}
+
+      {currentWorkflow === 'ADMIN_CONSOLE' && (
+        <WorkflowErrorBoundary workflowName="Admin Console">
+          <AdminConsoleView />
+        </WorkflowErrorBoundary>
+      )}
+
+      {currentWorkflow === 'RESPONSIBLE_AI' && (
+        <WorkflowErrorBoundary workflowName="Responsible AI Charter">
+          <ResponsibleAIPage onBack={() => setCurrentWorkflow('STUDY_STUDIO')} />
+        </WorkflowErrorBoundary>
+      )}
+
+      {currentWorkflow === 'PRIVACY_POLICY' && (
+        <WorkflowErrorBoundary workflowName="Privacy Policy">
+          <PrivacyPolicyPage onBack={() => setCurrentWorkflow('STUDY_STUDIO')} />
         </WorkflowErrorBoundary>
       )}
 

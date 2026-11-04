@@ -17,6 +17,7 @@ function rowToUser(row: any): StoreUser {
     theme: row.theme || 'dark',
     passwordHash: row.password_hash || undefined,
     tokenVersion: row.token_version ?? 1,
+    retentionDays: row.retention_days ?? 180,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -42,8 +43,8 @@ export const userRepository = {
       INSERT INTO users (
         id, name, email, role, plan, degree, preferred_languages,
         streak_days, tests_completed, overall_mastery, theme,
-        password_hash, token_version, created_at, updated_at, synthetic
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        password_hash, token_version, retention_days, created_at, updated_at, synthetic
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -60,6 +61,7 @@ export const userRepository = {
       user.theme || 'dark',
       user.passwordHash || null,
       user.tokenVersion ?? 1,
+      user.retentionDays ?? 180,
       user.createdAt || now,
       user.updatedAt || now,
       user.synthetic ? 1 : 0
@@ -118,6 +120,7 @@ export const userRepository = {
         theme = ?,
         password_hash = ?,
         token_version = ?,
+        retention_days = ?,
         updated_at = ?
       WHERE id = ?
     `);
@@ -135,6 +138,7 @@ export const userRepository = {
       updated.theme || 'dark',
       updated.passwordHash || null,
       updated.tokenVersion ?? 1,
+      updated.retentionDays ?? 180,
       updated.updatedAt,
       id
     );

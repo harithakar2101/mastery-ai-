@@ -26,6 +26,8 @@ import {
   LayoutDashboard,
   GraduationCap,
   Award,
+  Scale,
+  FileText,
   X,
 } from 'lucide-react';
 
@@ -104,6 +106,8 @@ export const VisionSidebar: React.FC<VisionSidebarProps> = ({
       label: userProfile.role === 'teacher' ? 'Teacher Console' : 'Student ISLM',
       icon: LayoutDashboard,
     },
+    ...(userProfile.role === 'admin' ? [{ id: 'ADMIN_CONSOLE', label: 'Admin Console', icon: ShieldCheck }] : []),
+    { id: 'RESPONSIBLE_AI', label: 'Responsible AI', icon: Scale },
   ];
 
   return (

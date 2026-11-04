@@ -65,6 +65,13 @@ export const sessionRepository = {
     runTx();
   },
 
+  listByStudentPaginated(
+    studentId: string,
+    options?: PaginationOptions
+  ): PaginatedResult<SessionDbRecord> {
+    return this.findByStudentPaginated(studentId, options);
+  },
+
   findByStudentPaginated(
     studentId: string,
     options?: PaginationOptions

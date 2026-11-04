@@ -38,6 +38,7 @@ export interface StoreUser {
   theme?: 'dark' | 'light';
   passwordHash?: string;
   tokenVersion?: number;
+  retentionDays?: number;
   createdAt?: string;
   updatedAt?: string;
 }

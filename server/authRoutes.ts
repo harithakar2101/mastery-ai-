@@ -21,6 +21,7 @@ import {
   flashcardRepository,
   studyPlanRepository,
   portfolioRepository,
+  auditLogRepository,
   type StoreUser,
   type UserRole,
 } from './repositories/index.ts';
@@ -324,6 +325,15 @@ authRouter.post('/delete-account', authenticate, async (req: Request, res: Respo
     studyPlanRepository.deleteByStudentId(userId);
     portfolioRepository.deleteByStudentId(userId);
 
+    auditLogRepository.log({
+      userId,
+      userRole: req.user!.role,
+      action: 'USER_DELETE_ACCOUNT',
+      resourceType: 'user',
+      resourceId: userId,
+      ipAddress: req.ip,
+    });
+
     clearSessionCookie(res);
     return res.json({
       success: true,
@@ -369,5 +379,35 @@ authRouter.get('/export-data', authenticate, (req: Request, res: Response) => {
     return res.json(exportPayload);
   } catch (err: any) {
     return sendError(res, 500, 'EXPORT_FAILED', err?.message || 'Failed to export data', req);
+  }
+});
+
+// 10. Update Data Retention Preferences
+authRouter.post('/retention', authenticate, (req: Request, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const retentionDays = Number(req.body.retentionDays);
+
+    if (isNaN(retentionDays) || retentionDays < 1 || retentionDays > 3650) {
+      return sendError(res, 400, 'INVALID_RETENTION_DAYS', 'Retention days must be an integer between 1 and 3650.', req);
+    }
+
+    userRepository.update(userId, { retentionDays });
+
+    auditLogRepository.log({
+      userId,
+      userRole: req.user!.role,
+      action: 'USER_UPDATE_RETENTION_PREFERENCE',
+      details: { retentionDays },
+      ipAddress: req.ip,
+    });
+
+    return res.json({
+      success: true,
+      message: `Data retention period successfully updated to ${retentionDays} days.`,
+      retentionDays,
+    });
+  } catch (err: any) {
+    return sendError(res, 500, 'RETENTION_UPDATE_FAILED', err?.message || 'Failed to update retention preferences', req);
   }
 });

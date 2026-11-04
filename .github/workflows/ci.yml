@@ -1,0 +1,58 @@
+name: CogniCSE CI Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    name: Lint, Test, Benchmark & Build
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      JWT_SECRET: ci_test_jwt_secret_key_minimum_32_characters_long_for_hmac
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'ci_mock_gemini_key_for_testing' }}
+      GEMINI_MODEL: gemini-2.5-flash
+      GEMINI_TTS_MODEL: gemini-2.0-flash
+      PORT: 3000
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: TypeScript Lint & Typecheck
+        run: npm run lint
+
+      - name: Execute Full Test Suite (100 Tests)
+        run: npm test
+
+      - name: 50-Student Concurrency Benchmark (0 Lost Writes)
+        run: npm run test:concurrency
+
+      - name: Run Anti-Answer Policy 30-Prompt Audit
+        run: npx tsx scripts/evalAntiAnswer.ts
+
+      - name: Production Vite Build
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Verify Health Probes
+        run: |
+          npx tsx -e "
+            import { runMigrations } from './server/db/migrations.ts';
+            const version = runMigrations();
+            console.log('Database migration verified at version:', version);
+          "

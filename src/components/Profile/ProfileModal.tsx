@@ -44,6 +44,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
   const [targetMajor, setTargetMajor] = useState(userProfile.targetMajor || 'Systems & Artificial Intelligence');
   const [preferredLanguages, setPreferredLanguages] = useState<SupportedLanguage[]>(userProfile.preferredLanguages);
   const [theme, setTheme] = useState<'dark' | 'light'>(userProfile.theme);
+  const [retentionDays, setRetentionDays] = useState<number>(userProfile.retentionDays || 180);
+  const [isUpdatingRetention, setIsUpdatingRetention] = useState(false);
 
   // Security form state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -120,6 +122,27 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     } catch (err: any) {
       setSecurityMessage({ text: err?.message || 'Failed to sign out everywhere.', isError: true });
       setIsSigningOutAll(false);
+    }
+  };
+
+  const handleUpdateRetention = async () => {
+    setIsUpdatingRetention(true);
+    setSecurityMessage(null);
+    try {
+      const res = await fetch('/api/auth/retention', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ retentionDays }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || 'Failed to update retention preferences');
+      setUserProfile(prev => ({ ...prev, retentionDays }));
+      setSecurityMessage({ text: `Retention preferences saved: personal history retained for ${retentionDays} days.`, isError: false });
+    } catch (err: any) {
+      setSecurityMessage({ text: err.message, isError: true });
+    } finally {
+      setIsUpdatingRetention(false);
     }
   };
 
@@ -463,6 +486,35 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
                   {isSigningOutAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <LogOut className="w-3.5 h-3.5" />}
                   <span>Sign Out All</span>
                 </button>
+              </div>
+
+              {/* Data Retention Period */}
+              <div className="pt-3 border-t border-[#1a273b] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="text-slate-200 font-bold">Data Retention Window</div>
+                  <div className="text-[11px] text-slate-400">Personal attempts, sessions, and sensor events expire and purge automatically.</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={retentionDays}
+                    onChange={e => setRetentionDays(Number(e.target.value))}
+                    className="bg-[#0c1421] border border-[#1a273b] rounded-xl px-2.5 py-1.5 text-xs text-slate-200 cursor-pointer"
+                  >
+                    <option value={30}>30 Days</option>
+                    <option value={90}>90 Days</option>
+                    <option value={180}>180 Days (Default)</option>
+                    <option value={365}>1 Year (365 Days)</option>
+                    <option value={730}>2 Years (730 Days)</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={handleUpdateRetention}
+                    disabled={isUpdatingRetention}
+                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold cursor-pointer"
+                  >
+                    {isUpdatingRetention ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
               </div>
             </div>
 

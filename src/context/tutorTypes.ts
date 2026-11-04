@@ -31,7 +31,10 @@ export type AppWorkflow =
   | 'ENGAGEMENT'
   | 'LIVE_CLASS'
   | 'STUDY_STUDIO'
-  | 'PORTFOLIO';
+  | 'PORTFOLIO'
+  | 'ADMIN_CONSOLE'
+  | 'RESPONSIBLE_AI'
+  | 'PRIVACY_POLICY';
 
 export interface TutorContextType {
   isAuthenticated: boolean;

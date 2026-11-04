@@ -37,6 +37,7 @@ export const updateUserStateSchema = z.object({
     preferredLanguages: z.array(z.string()).optional(),
     degree: z.string().optional(),
     avatar: z.string().optional(),
+    retentionDays: z.number().int().min(1).max(3650).optional(),
   }).optional(),
   islm: z.record(z.string(), z.any()).optional(),
   dkmNodes: z.array(z.any()).optional(),

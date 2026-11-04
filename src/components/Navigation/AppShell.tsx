@@ -110,6 +110,9 @@ export const AppShell: React.FC<AppShellProps> = ({
     STUDENT_DASHBOARD: 'Student ISLM Analytics',
     TEACHER_DASHBOARD: 'Teacher Cohort Console',
     ENGAGEMENT: 'Sensors & Attention Monitor',
+    ADMIN_CONSOLE: 'Admin & Integrity Console',
+    RESPONSIBLE_AI: 'Responsible AI Charter',
+    PRIVACY_POLICY: 'Privacy Policy',
   };
 
   // Commands for Ctrl+K Command Palette
@@ -389,6 +392,22 @@ export const AppShell: React.FC<AppShellProps> = ({
                   >
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                     <span>Security Audit</span>
+                  </button>
+
+                  <button
+                    onClick={() => setCurrentWorkflow('RESPONSIBLE_AI')}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-[#142236] hover:text-white transition-colors cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Responsible AI</span>
+                  </button>
+
+                  <button
+                    onClick={() => setCurrentWorkflow('PRIVACY_POLICY')}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs text-slate-300 hover:bg-[#142236] hover:text-white transition-colors cursor-pointer"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-teal-400" />
+                    <span>Privacy Policy</span>
                   </button>
 
                   <div className="pt-1 border-t border-[#18263a] mt-1">

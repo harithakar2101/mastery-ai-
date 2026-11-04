@@ -90,6 +90,7 @@ export interface UserProfile {
   preferredLanguages: SupportedLanguage[];
   targetMajor?: string;
   avatar?: string;
+  retentionDays?: number;
 }
 
 export type VisualizerMode =

@@ -4,6 +4,7 @@ import {
   attemptRepository,
   eventRepository,
   interventionRepository,
+  auditLogRepository,
 } from './repositories/index.ts';
 import { processInterventionSuggestionsRequest } from './gemini.ts';
 import { authenticate, requireRole } from './authMiddleware.ts';
@@ -235,6 +236,16 @@ export function registerTeacherRoutes(app: Express) {
         });
       }
 
+      auditLogRepository.log({
+        userId: req.user!.id,
+        userRole: req.user!.role,
+        action: 'TEACHER_APPROVE_INTERVENTION',
+        resourceType: 'intervention',
+        resourceId: interventionId,
+        details: { studentId, conceptId, tutorMessage },
+        ipAddress: req.ip,
+      });
+
       return res.json({ success: true, intervention: approvedItem });
     } catch (err: any) {
       return sendError(res, 500, 'INTERVENTION_APPROVE_ERROR', err?.message || 'Failed to approve intervention', req);
@@ -246,6 +257,16 @@ export function registerTeacherRoutes(app: Express) {
     try {
       const { interventionId } = req.body;
       interventionRepository.update(interventionId, { status: 'dismissed' });
+
+      auditLogRepository.log({
+        userId: req.user!.id,
+        userRole: req.user!.role,
+        action: 'TEACHER_DISMISS_INTERVENTION',
+        resourceType: 'intervention',
+        resourceId: interventionId,
+        ipAddress: req.ip,
+      });
+
       return res.json({ success: true });
     } catch (err: any) {
       return sendError(res, 500, 'INTERVENTION_DISMISS_ERROR', err?.message || 'Failed to dismiss intervention', req);

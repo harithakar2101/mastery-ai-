@@ -12,3 +12,5 @@ export * from './studyPlanRepository.ts';
 export * from './portfolioRepository.ts';
 export * from './cohortRepository.ts';
 export * from './videoRepository.ts';
+export * from './auditLogRepository.ts';
+export * from './quotaRepository.ts';

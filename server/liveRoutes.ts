@@ -3,7 +3,7 @@ import { liveSessionService } from './services/LiveSessionService.ts';
 import { processLiveTranscriptRequest } from './gemini.ts';
 import { authenticate, requireRole } from './authMiddleware.ts';
 import { verifySessionToken, COOKIE_NAME, sendError } from './auth.ts';
-import { userRepository } from './repositories/index.ts';
+import { userRepository, auditLogRepository } from './repositories/index.ts';
 import {
   validateBody,
   liveSessionStartSchema,
@@ -90,6 +90,17 @@ export function registerLiveRoutes(app: Express) {
           track: track || 'Web Application Development',
           teacherId: req.user!.id,
         });
+
+        auditLogRepository.log({
+          userId: req.user!.id,
+          userRole: req.user!.role,
+          action: 'TEACHER_START_LIVE_SESSION',
+          resourceType: 'live_session',
+          resourceId: session.sessionId || (session as any).id,
+          details: { topicId, topicName, track },
+          ipAddress: req.ip,
+        });
+
         return res.json({ success: true, session });
       } catch (err: any) {
         return sendError(res, 500, 'LIVE_START_ERROR', err?.message || 'Failed to start live session', req);
@@ -101,6 +112,15 @@ export function registerLiveRoutes(app: Express) {
   app.post('/api/live/session/end', authenticate, requireRole('teacher', 'admin'), (req: Request, res: Response) => {
     try {
       const result = liveSessionService.endSession();
+
+      auditLogRepository.log({
+        userId: req.user!.id,
+        userRole: req.user!.role,
+        action: 'TEACHER_END_LIVE_SESSION',
+        resourceType: 'live_session',
+        ipAddress: req.ip,
+      });
+
       return res.json(result);
     } catch (err: any) {
       return sendError(res, 500, 'LIVE_END_ERROR', err?.message || 'Failed to end live session', req);
