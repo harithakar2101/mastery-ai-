@@ -361,6 +361,187 @@ export const migrations: Migration[] = [
       }
     },
   },
+  {
+    version: 7,
+    name: '007_inclusive_assistive_hub_schema',
+    up: (db: Database.Database) => {
+      // 1. Wearable Devices Table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS wearable_devices (
+          id TEXT PRIMARY KEY,
+          device_id TEXT UNIQUE NOT NULL,
+          student_id TEXT,
+          device_token TEXT NOT NULL,
+          device_type TEXT NOT NULL DEFAULT 'ESP32_WROOM_32',
+          accessibility_mode TEXT NOT NULL CHECK(accessibility_mode IN ('BLIND', 'DEAF', 'NON_SPEAKING')),
+          firmware_version TEXT DEFAULT '1.0.0',
+          status TEXT NOT NULL DEFAULT 'disconnected' CHECK(status IN ('connected', 'disconnected', 'pairing')),
+          battery_pct INTEGER DEFAULT 100,
+          last_heartbeat TEXT,
+          source TEXT NOT NULL DEFAULT 'hardware' CHECK(source IN ('simulation', 'hardware')),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE SET NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_wearable_devices_dev_id ON wearable_devices(device_id);
+        CREATE INDEX IF NOT EXISTS idx_wearable_devices_stu_id ON wearable_devices(student_id);
+        CREATE INDEX IF NOT EXISTS idx_wearable_devices_source ON wearable_devices(source);
+      `);
+
+      // 2. Wearable Events Table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS wearable_events (
+          id TEXT PRIMARY KEY,
+          event_id TEXT UNIQUE NOT NULL,
+          device_id TEXT NOT NULL,
+          student_id TEXT,
+          event_type TEXT NOT NULL DEFAULT 'HELP_REQUEST',
+          request TEXT NOT NULL CHECK(request IN ('I_NEED_HELP', 'I_NEED_BREAK', 'CANCEL', 'ACKNOWLEDGE')),
+          accessibility_mode TEXT NOT NULL CHECK(accessibility_mode IN ('BLIND', 'DEAF', 'NON_SPEAKING')),
+          status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending', 'Acknowledged', 'Assistance Provided', 'Resolved', 'Cancelled')),
+          vibration_pattern TEXT,
+          led_color TEXT,
+          oled_text TEXT,
+          acknowledged_at TEXT,
+          acknowledged_by TEXT,
+          resolved_at TEXT,
+          resolved_by TEXT,
+          source TEXT NOT NULL DEFAULT 'hardware' CHECK(source IN ('simulation', 'hardware')),
+          timestamp TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE SET NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_wearable_events_dev_id ON wearable_events(device_id);
+        CREATE INDEX IF NOT EXISTS idx_wearable_events_stu_id ON wearable_events(student_id);
+        CREATE INDEX IF NOT EXISTS idx_wearable_events_status ON wearable_events(status);
+        CREATE INDEX IF NOT EXISTS idx_wearable_events_source ON wearable_events(source);
+        CREATE INDEX IF NOT EXISTS idx_wearable_events_ts ON wearable_events(timestamp);
+      `);
+
+      // 3. Sensor Readings Table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS sensor_readings (
+          id TEXT PRIMARY KEY,
+          device_id TEXT NOT NULL,
+          student_id TEXT,
+          heart_rate REAL,
+          spo2 REAL,
+          gsr_eda REAL,
+          accel_x REAL,
+          accel_y REAL,
+          accel_z REAL,
+          temp_c REAL,
+          is_anomaly INTEGER DEFAULT 0,
+          review_flag INTEGER DEFAULT 0,
+          source TEXT NOT NULL DEFAULT 'hardware' CHECK(source IN ('simulation', 'hardware')),
+          timestamp TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE SET NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_sensor_readings_dev ON sensor_readings(device_id);
+        CREATE INDEX IF NOT EXISTS idx_sensor_readings_source ON sensor_readings(source);
+        CREATE INDEX IF NOT EXISTS idx_sensor_readings_ts ON sensor_readings(timestamp);
+      `);
+
+      // 4. Wearable Event Audit Logs Table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS wearable_event_audit_logs (
+          id TEXT PRIMARY KEY,
+          event_id TEXT NOT NULL,
+          previous_status TEXT,
+          new_status TEXT NOT NULL,
+          actor_id TEXT NOT NULL,
+          actor_name TEXT NOT NULL,
+          actor_role TEXT NOT NULL,
+          notes TEXT,
+          timestamp TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_event_audit_event_id ON wearable_event_audit_logs(event_id);
+      `);
+
+      // 5. Wearable Hub Settings Table
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS wearable_settings (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        );
+      `);
+
+      // 6. Seed default settings
+      const now = new Date().toISOString();
+      const insertSetting = db.prepare(`INSERT OR IGNORE INTO wearable_settings (key, value, updated_at) VALUES (?, ?, ?)`);
+      insertSetting.run('sensor_consent_enabled', 'true', now);
+      insertSetting.run('audio_alerts_disabled', 'true', now);
+      insertSetting.run('high_contrast_mode', 'false', now);
+      insertSetting.run('data_retention_days', '180', now);
+
+      // 7. Seed Simulated Students (A, B, C)
+      const defaultPasswordHash = '$2b$10$49dpOl7qIuncJvpKbScOIu.0Afira2XT/HEZqWqBKCsqZtrl6o/Dq';
+      const insertUser = db.prepare(`
+        INSERT OR IGNORE INTO users (id, name, email, role, plan, theme, streak_days, tests_completed, overall_mastery, password_hash, token_version, created_at, updated_at, synthetic)
+        VALUES (?, ?, ?, 'student', 'Accessible Plan', 'dark', 1, 0, 0.50, ?, 1, ?, ?, 1)
+      `);
+      insertUser.run('STU_SIM_A', 'Student A', 'student.a@mastery.ai', defaultPasswordHash, now, now);
+      insertUser.run('STU_SIM_B', 'Student B', 'student.b@mastery.ai', defaultPasswordHash, now, now);
+      insertUser.run('STU_SIM_C', 'Student C', 'student.c@mastery.ai', defaultPasswordHash, now, now);
+
+      // 8. Seed Simulated Devices
+      const insertDevice = db.prepare(`
+        INSERT OR IGNORE INTO wearable_devices (id, device_id, student_id, device_token, device_type, accessibility_mode, firmware_version, status, battery_pct, last_heartbeat, source, created_at, updated_at)
+        VALUES (?, ?, ?, ?, 'ESP32_WROOM_32', ?, '1.0.0', 'connected', ?, ?, 'simulation', ?, ?)
+      `);
+      insertDevice.run('dev_sim_01', 'ESP32-01', 'STU_SIM_A', 'dev_token_sim_esp32_01', 'BLIND', 94, now, now, now);
+      insertDevice.run('dev_sim_02', 'ESP32-02', 'STU_SIM_B', 'dev_token_sim_esp32_02', 'DEAF', 88, now, now, now);
+      insertDevice.run('dev_sim_03', 'ESP32-03', 'STU_SIM_C', 'dev_token_sim_esp32_03', 'NON_SPEAKING', 91, now, now, now);
+
+      // 9. Seed Sample Simulated Events
+      const insertEvent = db.prepare(`
+        INSERT OR IGNORE INTO wearable_events (id, event_id, device_id, student_id, event_type, request, accessibility_mode, status, vibration_pattern, led_color, oled_text, source, timestamp, created_at, updated_at)
+        VALUES (?, ?, ?, ?, 'HELP_REQUEST', ?, ?, ?, ?, ?, ?, 'simulation', ?, ?, ?)
+      `);
+      insertEvent.run(
+        'evt_sim_seed_1',
+        'e8f3b201-7294-4b51-8729-192a0e413001',
+        'ESP32-03',
+        'STU_SIM_C',
+        'I_NEED_HELP',
+        'NON_SPEAKING',
+        'Pending',
+        'DOUBLE_PULSE_150MS',
+        '#EAB308',
+        'REQUEST: I NEED HELP\nAWAITING TEACHER',
+        now,
+        now,
+        now
+      );
+      insertEvent.run(
+        'evt_sim_seed_2',
+        'a1b2c3d4-5e6f-4a5b-9c8d-7e8f9a0b1c2d',
+        'ESP32-01',
+        'STU_SIM_A',
+        'I_NEED_BREAK',
+        'BLIND',
+        'Acknowledged',
+        'TRIPLE_PULSE_HEAVY',
+        '#3B82F6',
+        '',
+        new Date(Date.now() - 300000).toISOString(),
+        now,
+        now
+      );
+
+      // 10. Seed Sample Sensor Readings
+      const insertSensor = db.prepare(`
+        INSERT OR IGNORE INTO sensor_readings (id, device_id, student_id, heart_rate, spo2, gsr_eda, accel_x, accel_y, accel_z, temp_c, is_anomaly, review_flag, source, timestamp, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'simulation', ?, ?)
+      `);
+      insertSensor.run('sens_sim_1', 'ESP32-01', 'STU_SIM_A', 74.5, 98.2, 4.2, 0.05, -0.12, 9.81, 36.6, 0, 0, now, now);
+      insertSensor.run('sens_sim_2', 'ESP32-02', 'STU_SIM_B', 81.0, 97.8, 5.1, 0.10, 0.08, 9.79, 36.7, 0, 0, now, now);
+      insertSensor.run('sens_sim_3', 'ESP32-03', 'STU_SIM_C', 92.4, 98.0, 7.8, 0.22, 0.15, 9.82, 36.8, 0, 1, now, now);
+    },
+  },
 ];
 
 export function runMigrations(targetDb?: Database.Database): number {

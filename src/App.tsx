@@ -21,6 +21,7 @@ import { PublicPortfolioPage } from './components/Portfolio/PublicPortfolioPage'
 import { ResponsibleAIPage } from './components/Legal/ResponsibleAIPage';
 import { PrivacyPolicyPage } from './components/Legal/PrivacyPolicyPage';
 import { AdminConsoleView } from './components/Admin/AdminConsoleView';
+import { InclusiveHubLayout } from './components/InclusiveHub/InclusiveHubLayout';
 import { ToastProvider, SkeletonCard } from './components/UI';
 
 // Route-level code splitting for heavy WebGL & Media libraries per Prompt G
@@ -52,6 +53,7 @@ const SuspenseFallback: React.FC<{ label: string }> = ({ label }) => (
 const MainApplication: React.FC = () => {
   const {
     isAuthenticated,
+    userProfile,
     currentWorkflow,
     setCurrentWorkflow,
     setSelectedNode,
@@ -76,6 +78,26 @@ const MainApplication: React.FC = () => {
 
   if (isPublicPortfolio && publicSlug) {
     return <PublicPortfolioPage slug={publicSlug} />;
+  }
+
+  // Check for Inclusive Assistive Hub route or workflow
+  const isInclusiveHub = pathname.startsWith('/inclusive-hub') || currentWorkflow === 'INCLUSIVE_HUB';
+  if (isInclusiveHub && isAuthenticated) {
+    return (
+      <WorkflowErrorBoundary workflowName="Inclusive Assistive Hub">
+        <InclusiveHubLayout
+          userRole={userProfile?.role || 'teacher'}
+          userId={userProfile?.id || 'STU_SIM_A'}
+          userName={userProfile?.name || 'Student'}
+          onExit={() => {
+            if (typeof window !== 'undefined' && window.history.pushState) {
+              window.history.pushState(null, '', '/');
+            }
+            setCurrentWorkflow('STUDY_STUDIO');
+          }}
+        />
+      </WorkflowErrorBoundary>
+    );
   }
 
   // If not authenticated, show Showcase Landing Page with Login & Demo modes
@@ -211,6 +233,17 @@ const MainApplication: React.FC = () => {
             <EngagementPanel />
           </WorkflowErrorBoundary>
         </Suspense>
+      )}
+
+      {currentWorkflow === 'INCLUSIVE_HUB' && (
+        <WorkflowErrorBoundary workflowName="Inclusive Assistive Hub">
+          <InclusiveHubLayout
+            userRole={userProfile?.role || 'teacher'}
+            userId={userProfile?.id || 'STU_SIM_A'}
+            userName={userProfile?.name || 'Student'}
+            onExit={() => setCurrentWorkflow('STUDY_STUDIO')}
+          />
+        </WorkflowErrorBoundary>
       )}
 
       {currentWorkflow === 'LIVE_CLASS' && (

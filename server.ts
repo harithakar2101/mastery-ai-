@@ -63,6 +63,7 @@ import { registerStudyRoutes } from './server/studyRoutes.ts';
 import { registerStudyStudioRoutes } from './server/studyStudioRoutes.ts';
 import { registerVideoRoutes } from './server/videoRoutes.ts';
 import { portfolioRouter, getShowcaseMetricsHandler } from './server/portfolioRoutes.ts';
+import { inclusiveRouter } from './server/inclusiveRoutes.ts';
 import { portfolioRepository } from './server/repositories/index.ts';
 import { validateEnvironment } from './server/scripts/validateEnv.ts';
 
@@ -353,6 +354,9 @@ registerVideoRoutes(app);
 // Mount Learner Portfolio & Showcase Metrics routes
 app.use('/api/portfolio', portfolioRouter);
 app.get('/api/showcase/metrics', getShowcaseMetricsHandler);
+
+// Mount Mastery.ai Inclusive Assistive Hub routes (Wearables, Requests, Sensors, Simulator)
+app.use('/api/inclusive', inclusiveRouter);
 
 // Public route /p/:slug with strict revocation & privacy checks
 app.get('/p/:slug', (req: Request, res: Response, next: NextFunction) => {

@@ -34,7 +34,8 @@ export type AppWorkflow =
   | 'PORTFOLIO'
   | 'ADMIN_CONSOLE'
   | 'RESPONSIBLE_AI'
-  | 'PRIVACY_POLICY';
+  | 'PRIVACY_POLICY'
+  | 'INCLUSIVE_HUB';
 
 export interface TutorContextType {
   isAuthenticated: boolean;

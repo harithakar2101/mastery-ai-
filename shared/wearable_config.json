@@ -1,0 +1,182 @@
+{
+  "system": "Mastery.ai Inclusive Assistive Hub",
+  "version": "1.0.0",
+  "modes": {
+    "BLIND": {
+      "name": "Blind Accessibility Mode",
+      "interaction": "Physical tactile buttons & vibration motors only. Zero dependency on visual OLED or RGB LEDs.",
+      "feedbackType": "tactile",
+      "requiresOled": false,
+      "requiresLed": false
+    },
+    "DEAF": {
+      "name": "Deaf Accessibility Mode",
+      "interaction": "High-contrast OLED text alerts, RGB LED status indicators, vibration alerts, physical acknowledgement button. Zero dependency on acoustic buzzers.",
+      "feedbackType": "visual_and_tactile",
+      "requiresOled": true,
+      "requiresLed": true
+    },
+    "NON_SPEAKING": {
+      "name": "Non-Speaking Accessibility Mode",
+      "interaction": "Dedicated phrase buttons: 'I Need Help', 'I Need a Break', 'Cancel'. High-visibility on-screen confirmation and tactile feedback.",
+      "feedbackType": "visual_and_tactile",
+      "requiresOled": true,
+      "requiresLed": true
+    }
+  },
+  "requests": {
+    "I_NEED_HELP": {
+      "label": "I Need Help",
+      "priority": "HIGH",
+      "badge": "Urgent Assistance",
+      "color": "#EF4444"
+    },
+    "I_NEED_BREAK": {
+      "label": "I Need a Break",
+      "priority": "MEDIUM",
+      "badge": "Break / Pause",
+      "color": "#F59E0B"
+    },
+    "CANCEL": {
+      "label": "Cancel Request",
+      "priority": "LOW",
+      "badge": "Withdrawn",
+      "color": "#64748B"
+    },
+    "ACKNOWLEDGE": {
+      "label": "Acknowledge",
+      "priority": "INFO",
+      "badge": "Acknowledged",
+      "color": "#3B82F6"
+    }
+  },
+  "statuses": {
+    "Pending": {
+      "label": "Pending",
+      "badgeColor": "#EAB308",
+      "description": "Request submitted; queued on teacher console"
+    },
+    "Acknowledged": {
+      "label": "Acknowledged",
+      "badgeColor": "#3B82F6",
+      "description": "Teacher acknowledged; assistance en route"
+    },
+    "Assistance Provided": {
+      "label": "Assistance Provided",
+      "badgeColor": "#8B5CF6",
+      "description": "Teacher actively engaging or assistance rendered"
+    },
+    "Resolved": {
+      "label": "Resolved",
+      "badgeColor": "#10B981",
+      "description": "Request completed successfully; all clear"
+    },
+    "Cancelled": {
+      "label": "Cancelled",
+      "badgeColor": "#64748B",
+      "description": "Request withdrawn by student or teacher"
+    }
+  },
+  "vibrationPatterns": {
+    "ACTIVATION": {
+      "name": "Activation / Button Press",
+      "patternMs": [200],
+      "description": "Single crisp 200ms haptic confirmation"
+    },
+    "REQUEST_SENT": {
+      "name": "Request Sent / Queued",
+      "patternMs": [150, 100, 150],
+      "description": "Double pulse confirming event reached the cloud"
+    },
+    "ACKNOWLEDGED": {
+      "name": "Teacher Acknowledged",
+      "patternMs": [300, 100, 300, 100, 500],
+      "description": "Distinctive triple heavy pulse indicating teacher is on the way"
+    },
+    "ASSISTANCE_PROVIDED": {
+      "name": "Assistance In Progress",
+      "patternMs": [200, 100, 200],
+      "description": "Medium double pulse"
+    },
+    "RESOLVED": {
+      "name": "Session Resolved",
+      "patternMs": [100, 80, 100, 80, 300],
+      "description": "Smooth rising resolution cadence"
+    },
+    "FAILURE": {
+      "name": "Delivery Error / No Connection",
+      "patternMs": [80, 50, 80, 50, 80, 50, 80],
+      "description": "Rapid 4-pulse staccato indicating delivery failed"
+    },
+    "CANCELLED": {
+      "name": "Request Cancelled",
+      "patternMs": [400, 200, 200],
+      "description": "Long decelerating cancellation pulse"
+    }
+  },
+  "ledColors": {
+    "IDLE": {
+      "hex": "#475569",
+      "rgb": [71, 85, 105],
+      "state": "Standby / Connected"
+    },
+    "PENDING": {
+      "hex": "#EAB308",
+      "rgb": [234, 179, 8],
+      "state": "Pending Instructor Response"
+    },
+    "ACKNOWLEDGED": {
+      "hex": "#3B82F6",
+      "rgb": [59, 130, 246],
+      "state": "Acknowledged by Teacher"
+    },
+    "ASSISTANCE_PROVIDED": {
+      "hex": "#8B5CF6",
+      "rgb": [139, 92, 246],
+      "state": "Teacher Engaging"
+    },
+    "RESOLVED": {
+      "hex": "#10B981",
+      "rgb": [16, 185, 129],
+      "state": "Resolved"
+    },
+    "FAILURE": {
+      "hex": "#EF4444",
+      "rgb": [239, 68, 68],
+      "state": "Hardware / Network Error"
+    },
+    "CANCELLED": {
+      "hex": "#64748B",
+      "rgb": [100, 116, 139],
+      "state": "Cancelled"
+    }
+  },
+  "oledMessages": {
+    "BLIND": {
+      "IDLE": "",
+      "PENDING": "",
+      "ACKNOWLEDGED": "",
+      "RESOLVED": "",
+      "CANCELLED": "",
+      "FAILURE": ""
+    },
+    "DEAF": {
+      "IDLE": "STATUS: READY\nBATTERY: OPTIMAL",
+      "PENDING": "HELP REQUESTED\nAWAITING TEACHER",
+      "ACKNOWLEDGED": "TEACHER ACKNOWLEDGED\nASSISTANCE EN ROUTE",
+      "ASSISTANCE_PROVIDED": "ASSISTANCE PROVIDED\nIN PROGRESS",
+      "RESOLVED": "RESOLVED\nALL CLEAR",
+      "CANCELLED": "REQUEST CANCELLED",
+      "FAILURE": "DELIVERY FAILED\nRETRYING VIA MESH"
+    },
+    "NON_SPEAKING": {
+      "IDLE": "SELECT REQUEST:\n[HELP] [BREAK]",
+      "PENDING": "SENT: I NEED HELP\nWAITING FOR TEACHER",
+      "ACKNOWLEDGED": "CONFIRMED BY TEACHER\nCOMING TO YOU",
+      "ASSISTANCE_PROVIDED": "TEACHER ASSISTING",
+      "RESOLVED": "ALL CLEAR\nTHANK YOU",
+      "CANCELLED": "CANCELLED",
+      "FAILURE": "ERROR SENDING\nCHECK SIGNAL"
+    }
+  }
+}

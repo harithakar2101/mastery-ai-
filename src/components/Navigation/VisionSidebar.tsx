@@ -29,6 +29,7 @@ import {
   Scale,
   FileText,
   X,
+  Accessibility,
 } from 'lucide-react';
 
 interface VisionSidebarProps {
@@ -101,6 +102,7 @@ export const VisionSidebar: React.FC<VisionSidebarProps> = ({
     { id: 'AI_VIDEO', label: '60s AI Video', icon: Video },
     { id: 'COMPARISON_STUDY', label: 'Empirical Study', icon: BarChart3 },
     { id: 'ENGAGEMENT', label: 'Sensors & Attention', icon: HeartPulse },
+    { id: 'INCLUSIVE_HUB', label: 'Inclusive Hub', icon: Accessibility },
     {
       id: userProfile.role === 'teacher' ? 'TEACHER_DASHBOARD' : 'STUDENT_DASHBOARD',
       label: userProfile.role === 'teacher' ? 'Teacher Console' : 'Student ISLM',
